@@ -39,11 +39,20 @@ class UserService {
         await user.save();
     }
 
-    async login(email, password) {
-        const user = await UserModel.findOne({email});
-        if (!user) {
+    async login(identifier, password) {
+        const emailRegex = new RegExp(/^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/);
+        const isEmail = emailRegex.test(identifier);
+        
+        const user = isEmail
+            ? await UserModel.findOne({ email: identifier })
+            : await UserModel.findOne({ username: identifier });        
+
+        if (!user && isEmail) {
             throw ApiError.BadRequest('User with that email isn\'t find');
+        } else if (!user && !isEmail) {
+            throw ApiError.BadRequest('User with that username isn\'t find');
         }
+
         const isPassEquals = await bcrypt.compare(password, user.password);
         if(!isPassEquals) {
             throw ApiError.BadRequest('Incorrect password');
