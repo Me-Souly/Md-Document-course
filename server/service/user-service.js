@@ -4,22 +4,32 @@ const mailService = require('./mail-service');
 const tokenService = require('./token-service');
 const UserDto = require('../dtos/user-dto');
 const ApiError = require('../exceptions/api-error');
-const userRepository = require('../repositories/user/mongo-user-repository');
+const userRepository = require('../repositories/mongo/mongo-user-repository');
+const roleRepository = require('../repositories/mongo/mongo-role-repository');
 
 class UserService {
-    async registration(email, username, password) {  
-        const candidateByEmail = await userRepository.findByEmail(email);
-        const candidateByUsername = await userRepository.findByUsername(username);
+    async registration(email, login, password) {  
+        const candidateByEmail = await userRepository.findOneBy({email_lower: email.toLowerCase()});
+        const candidateByUsername = await userRepository.findOneBy({login: login.toLowerCase()});
         if (candidateByEmail !== null) {
             throw ApiError.BadRequest(`User with email ${email} already exists`);
         }
         if (candidateByUsername !== null) {
-            throw ApiError.BadRequest(`User with username ${username} already exists`);
+            throw ApiError.BadRequest(`User with login ${login} already exists`);
         }
 
         const hashPassword = await bcrypt.hash(password, 3);
+        const role = await roleRepository.findOneBy({ name: "user" });
         const activationLink = uuid.v4();
-        const user = await userRepository.create({email, username, password: hashPassword, activationLink});
+        const user = await userRepository.create({
+            email,
+            email_lower: email.toLowerCase(), 
+            login: login.toLowerCase(), 
+            passwordHash: hashPassword,
+            name: login,
+            roleId: role._id, 
+            activationLink
+        });
         await mailService.sendActivationMail(email, `${process.env.API_URL}/api/activate/${activationLink}`);
         
         const userDto = new UserDto(user);
@@ -45,11 +55,11 @@ class UserService {
 
     async login(identifier, password) {
         const emailRegex = new RegExp(/^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/);
-        const isEmail = emailRegex.test(identifier);
-        
+        const isEmail = emailRegex.test(identifier.toLowerCase());
+
         const user = isEmail
-            ? await userRepository.findByEmail(identifier)
-            : await userRepository.findByUsername(identifier);        
+            ? await userRepository.findOneBy({email_lower: identifier.toLowerCase()})
+            : await userRepository.findOneBy({login: identifier.toLowerCase()});    
 
         if (!user && isEmail) {
             throw ApiError.BadRequest('User with that email isn\'t find');
@@ -57,7 +67,7 @@ class UserService {
             throw ApiError.BadRequest('User with that username isn\'t find');
         }
 
-        const isPassEquals = await bcrypt.compare(password, user.password);
+        const isPassEquals = await bcrypt.compare(password, user.passwordHash);
         if(!isPassEquals) {
             throw ApiError.BadRequest('Incorrect password');
         }

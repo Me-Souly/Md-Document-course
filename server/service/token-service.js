@@ -1,5 +1,11 @@
 const jwt = require('jsonwebtoken');
-const TokenRepository = require('../repositories/token/mongo-token-repository');
+const TokenRepository = require('../repositories/mongo/mongo-token-repository');
+
+const EXPIRES = {
+  refresh: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000,
+  reset: parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES) * 60 * 1000,
+  activation: parseInt(process.env.ACTIVATION_TOKEN_EXPIRES_HOURS) * 60 * 60 * 1000
+};
 
 class TokenService {
     generateTokens(payload) {
@@ -31,18 +37,24 @@ class TokenService {
     }
 
     // only for one device - one user
-    async saveToken(userId, refreshToken) {
-        const tokenData = await TokenRepository.findById(userId);
+    async saveToken(userId, token, type = 'refresh') {
+        const tokenData = await TokenRepository.findOneBy({ userId });
         if(tokenData) {
-            tokenData.refreshToken = refreshToken;
+            tokenData.token = token;
             return tokenData.save();
         }
-        const token = await TokenRepository.create({user:userId, refreshToken});
-        return token;
+        const resultToken = await TokenRepository.create({
+            userId, 
+            token,
+            type,
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + EXPIRES[type])
+        });
+        return resultToken;
     }
 
-    async removeToken(refreshToken) {
-        const tokenData = await TokenRepository.deleteRefreshToken(refreshToken)
+    async removeToken(token) {
+        const tokenData = await TokenRepository.deleteToken(token)
         return tokenData;
     }
 
