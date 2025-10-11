@@ -6,7 +6,7 @@ const authMiddleware = require('../middlewares/auth-middleware');
 
 router.post('/registration', 
     body('email').isEmail(),
-    body('username').isLength({min: 5}),
+    body('username').isLength({min: 2}),
     body('password').isLength({min: 3, max: 32}),
     userController.registration);
 router.post('/login', userController.login);

@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const tokenModel = require('../models/token-model');
+const TokenRepository = require('../repositories/token/mongo-token-repository');
 
 class TokenService {
     generateTokens(payload) {
@@ -32,22 +32,22 @@ class TokenService {
 
     // only for one device - one user
     async saveToken(userId, refreshToken) {
-        const tokenData = await tokenModel.findOne({user:userId});
+        const tokenData = await TokenRepository.findById(userId);
         if(tokenData) {
             tokenData.refreshToken = refreshToken;
             return tokenData.save();
         }
-        const token = await tokenModel.create({user:userId, refreshToken});
+        const token = await TokenRepository.create({user:userId, refreshToken});
         return token;
     }
 
     async removeToken(refreshToken) {
-        const tokenData = await tokenModel.deleteOne({refreshToken})
+        const tokenData = await TokenRepository.deleteRefreshToken(refreshToken)
         return tokenData;
     }
 
     async findToken(refreshToken) {
-        const tokenData = await tokenModel.findOne({refreshToken})
+        const tokenData = await TokenRepository.findRefreshToken(refreshToken)
         return tokenData;
     }
 }
