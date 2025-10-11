@@ -1,0 +1,24 @@
+const { Schema, model } = require('mongoose');
+
+const UserSchema = new Schema({
+  email: { type: String, required: true},
+  email_lower: { type: String, required: true, index: true, unique: true },
+  username: { type: String, required: true },
+  username_lower: { type: String, required: true, index: true, unique: true },
+  passwordHash: { type: String, required: true },
+  name: String,
+  about: String,
+  avatarUrl: String,
+  roleId: { type: Schema.Types.ObjectId, ref: 'Role', required: true },
+  isActivated: { type: Boolean, default: false },
+  activationLink: { type: String, default: null }, // null после активации
+  isDeleted: { type: Boolean, default: false }
+}, { timestamps: true });
+
+UserSchema.pre('save', function(next) {
+  if (this.isModified('email')) this.email_lower = this.email.toLowerCase();
+  if (this.isModified('username')) this.username_lower = this.username.toLowerCase();
+  next();
+});
+
+module.exports = model('User', UserSchema);

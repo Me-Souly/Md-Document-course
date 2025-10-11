@@ -1,6 +1,7 @@
-const mongoose = require('mongoose');
-const RoleSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true }, // 'user','moderator','admin'
-  permissions: { type: [String], default: [] } // опционально: ['delete_public_notes', ...]
-}, { timestamps: true });
-module.exports = mongoose.model('Role', RoleSchema);
+const { Schema, model } = require('mongoose');
+
+const RoleSchema = new Schema({
+  name: { type: String, required: true, unique: true }
+});
+
+module.exports = model('Role', RoleSchema);
