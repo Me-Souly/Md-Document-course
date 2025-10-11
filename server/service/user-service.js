@@ -1,15 +1,15 @@
-const UserModel = require('../models/user-model');
 const bcrypt = require('bcrypt');
 const uuid = require('uuid');
 const mailService = require('./mail-service');
 const tokenService = require('./token-service');
 const UserDto = require('../dtos/user-dto');
 const ApiError = require('../exceptions/api-error');
+const userRepository = require('../repositories/user/mongo-user-repository');
 
 class UserService {
     async registration(email, username, password) {  
-        const candidateByEmail = await UserModel.findOne({email});
-        const candidateByUsername = await UserModel.findOne({username});
+        const candidateByEmail = await userRepository.findByEmail(email);
+        const candidateByUsername = await userRepository.findByUsername(username);
         if (candidateByEmail !== null) {
             throw ApiError.BadRequest(`User with email ${email} already exists`);
         }
@@ -19,7 +19,7 @@ class UserService {
 
         const hashPassword = await bcrypt.hash(password, 3);
         const activationLink = uuid.v4();
-        const user = await UserModel.create({email, username, password: hashPassword, activationLink});
+        const user = await userRepository.create({email, username, password: hashPassword, activationLink});
         await mailService.sendActivationMail(email, `${process.env.API_URL}/api/activate/${activationLink}`);
         
         const userDto = new UserDto(user);
@@ -34,7 +34,7 @@ class UserService {
     }
 
     async activate(activationLink) {
-        const user = await UserModel.findOne({activationLink});
+        const user = await userRepository.findByActivationLink(activationLink);
         if(!user) {
             throw ApiError.BadRequest('Некорректная строка активации');
         }
@@ -48,8 +48,8 @@ class UserService {
         const isEmail = emailRegex.test(identifier);
         
         const user = isEmail
-            ? await UserModel.findOne({ email: identifier })
-            : await UserModel.findOne({ username: identifier });        
+            ? await userRepository.findByEmail(identifier)
+            : await userRepository.findByUsername(identifier);        
 
         if (!user && isEmail) {
             throw ApiError.BadRequest('User with that email isn\'t find');
@@ -63,7 +63,7 @@ class UserService {
         }
         const userDto = new UserDto(user);
         const tokens = tokenService.generateTokens({...userDto});
-
+        
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
         return {...tokens, user: userDto}
     }
@@ -82,7 +82,7 @@ class UserService {
         if(!userData || !tokenFromDb) {
             throw ApiError.UnauthorizedError();
         }
-        const user = await UserModel.findById(userData.id);
+        const user = await userRepository.findById(userData.id);
         const userDto = new UserDto(user);
         const tokens = tokenService.generateTokens({...userDto});
 
@@ -91,7 +91,7 @@ class UserService {
     }
 
     async getAllUsers() {
-        const users = await UserModel.find();
+        const users = await userRepository.findAll();
         return users;
     }
 }
