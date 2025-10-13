@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const tokenRepository = require('../repositories/mongo/mongo-token-repository');
+const { tokenRepository } = require('../repositories');
 const ApiError = require('../exceptions/api-error');
 
 const EXPIRES = {
@@ -59,8 +59,7 @@ class TokenService {
             tokenData.expiresAt = new Date(Date.now() + EXPIRES[type]);
             return tokenData.save();
         }
-
-        const resultToken = await tokenRepository.create({
+        const savedToken = await tokenRepository.create({
             userId,
             token,
             type,
@@ -68,7 +67,7 @@ class TokenService {
             expiresAt: new Date(Date.now() + EXPIRES[type])
         });
 
-        return resultToken;
+        return savedToken;
     }
 
 

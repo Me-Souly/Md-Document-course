@@ -1,5 +1,5 @@
 const NoteModel = require('../../models/mongo/note-model');
-const CommentRepository = require("../comment-repository");
+const CommentRepository = require("../base/comment-repository");
 const MongoBaseRepository = require("./mongo-base-repository");
 
 class MongoCommentRepository extends CommentRepository {
@@ -29,4 +29,4 @@ class MongoCommentRepository extends CommentRepository {
     }
 }
 
-module.exports = new MongoCommentRepository();
+module.exports = MongoCommentRepository;

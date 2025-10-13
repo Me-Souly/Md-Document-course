@@ -1,5 +1,5 @@
 const TokenModel = require('../../models/mongo/token-model.js');
-const TokenRepository = require('../token-repository.js');
+const TokenRepository = require('../base/token-repository.js');
 const MongoBaseRepository = require('./mongo-base-repository.js');
 
 class MongoTokenRepository extends TokenRepository {
@@ -48,4 +48,4 @@ class MongoTokenRepository extends TokenRepository {
     }
 }
 
-module.exports = new MongoTokenRepository();
+module.exports = MongoTokenRepository;

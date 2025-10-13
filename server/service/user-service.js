@@ -4,8 +4,7 @@ const mailService = require('./mail-service');
 const tokenService = require('./token-service');
 const UserDto = require('../dtos/user-dto');
 const ApiError = require('../exceptions/api-error');
-const userRepository = require('../repositories/mongo/mongo-user-repository');
-const roleRepository = require('../repositories/mongo/mongo-role-repository');
+const { userRepository, roleRepository } = require('../repositories')
 
 class UserService {
     async registration(email, login, password) {  
@@ -80,9 +79,10 @@ class UserService {
         if(!isPassEquals) {
             throw ApiError.BadRequest('Incorrect password');
         }
+        const role = await roleRepository.findById(user.roleId);
+        user.roleId = role;
         const userDto = new UserDto(user);
         const tokens = tokenService.generateSessionTokens({...userDto});
-        
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
         return {...tokens, user: userDto}
     }

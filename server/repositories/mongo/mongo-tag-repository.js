@@ -1,5 +1,5 @@
 const TagModel = require("../../models/mongo/tag-model")
-const TagRepository = require("../tag-repository");
+const TagRepository = require("../base/tag-repository");
 const MongoBaseRepository = require("./mongo-base-repository");
 
 class MongoTagRepository extends TagRepository{
@@ -20,4 +20,4 @@ class MongoTagRepository extends TagRepository{
     }
 }
 
-module.exports = new MongoTagRepository();
+module.exports = MongoTagRepository;

@@ -1,6 +1,6 @@
 const RoleModel = require('../../models/mongo/role-model');
+const RoleRepository = require('../base/role-repository');
 const MongoBaseRepository = require("./mongo-base-repository");
-const RoleRepository = require('../role-repository');
 
 class MongoRoleRepository extends RoleRepository {
     constructor() {
@@ -10,7 +10,7 @@ class MongoRoleRepository extends RoleRepository {
 
     async findOneBy(filter) { return this.mongo.findOneBy(filter); }
     async findBy(filter) { return this.mongo.findBy(filter); }
-    // async findById(id) { return this.mongo.findById(id); }
+    async findById(id) { return this.mongo.findById(id); }
     async create(data) { return this.mongo.create(data); }
     async save(entity) { return this.mongo.save(entity); }
     async softDelete(id) { return this.mongo.softDelete(id); }
@@ -24,4 +24,4 @@ class MongoRoleRepository extends RoleRepository {
     }
 }
 
-module.exports = new MongoRoleRepository();
+module.exports = MongoRoleRepository;
