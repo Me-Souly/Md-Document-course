@@ -10,7 +10,6 @@ const UserSchema = new Schema({
   avatarUrl: String,
   roleId: { type: Schema.Types.ObjectId, ref: 'Role', required: true },
   isActivated: { type: Boolean, default: false },
-  activationLink: { type: String, default: null }, // null после активации
   isDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 

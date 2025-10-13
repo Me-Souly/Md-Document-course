@@ -17,10 +17,24 @@ class MongoTokenRepository extends TokenRepository {
 
 
     async findRefreshToken(refreshToken) {
-        return await TokenModel.findOne({
-            refreshToken,
+        return TokenModel.findOne({
+            token: refreshToken,
             type: 'refresh'
         });
+    }
+
+    async findResetToken(resetToken) { 
+        return TokenModel.findOne({
+            token: resetToken,
+            type: 'reset'
+        });    
+    }
+
+    async findActivationToken(activationToken) { 
+        return TokenModel.findOne({
+            token: activationToken,
+            type: 'activation'
+        });    
     }
 
     async deleteToken(token) {

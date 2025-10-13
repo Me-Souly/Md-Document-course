@@ -20,21 +20,26 @@ class UserService {
 
         const hashPassword = await bcrypt.hash(password, 3);
         const role = await roleRepository.findOneBy({ name: "user" });
-        const activationLink = uuid.v4();
+        
+        const activationToken = uuid.v4();
         const user = await userRepository.create({
             email,
             email_lower: email.toLowerCase(), 
             login: login.toLowerCase(), 
             passwordHash: hashPassword,
             name: login,
-            roleId: role._id, 
-            activationLink
+            roleId: role._id
         });
-        await mailService.sendActivationMail(email, `${process.env.API_URL}/api/activate/${activationLink}`);
+        
         
         const userDto = new UserDto(user);
-        const tokens = tokenService.generateTokens({...userDto});
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
+        const tokens = tokenService.generateSessionTokens({...userDto});
+        
+        await tokenService.saveToken(userDto.id, activationToken, 'activation');
+        await tokenService.saveToken(userDto.id, tokens.refreshToken, 'refresh');
+
+        mailService.sendActivationMail(email, `${process.env.API_URL}/api/activate/${activationToken}`)
+            .catch(err => console.error('Ошибка отправки письма', err));
 
         return {
             ...tokens,
@@ -43,14 +48,18 @@ class UserService {
 
     }
 
-    async activate(activationLink) {
-        const user = await userRepository.findByActivationLink(activationLink);
+    async activate(tokenString) {
+        const token = await tokenService.validateActivationToken(tokenString);
+        const user = await userRepository.findById(token.userId);
+        
         if(!user) {
-            throw ApiError.BadRequest('Некорректная строка активации');
+            throw ApiError.BadRequest('Incorrect activation string');
         }
 
         user.isActivated = true;
         await user.save();
+        
+        await tokenService.removeToken(token.token);
     }
 
     async login(identifier, password) {
@@ -72,7 +81,7 @@ class UserService {
             throw ApiError.BadRequest('Incorrect password');
         }
         const userDto = new UserDto(user);
-        const tokens = tokenService.generateTokens({...userDto});
+        const tokens = tokenService.generateSessionTokens({...userDto});
         
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
         return {...tokens, user: userDto}
@@ -88,14 +97,14 @@ class UserService {
             throw ApiError.UnauthorizedError();
         }
         const userData = tokenService.validateRefreshToken(refreshToken);
-        const tokenFromDb = await tokenService.findToken(refreshToken);
+        const tokenFromDb = await tokenService.findRefreshToken(refreshToken);
         if(!userData || !tokenFromDb) {
             throw ApiError.UnauthorizedError();
         }
+
         const user = await userRepository.findById(userData.id);
         const userDto = new UserDto(user);
-        const tokens = tokenService.generateTokens({...userDto});
-
+        const tokens = tokenService.generateSessionTokens({...userDto});
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
         return {...tokens, user: userDto}
     }
