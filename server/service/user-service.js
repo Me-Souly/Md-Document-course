@@ -7,6 +7,32 @@ const ApiError = require('../exceptions/api-error');
 const { userRepository, roleRepository } = require('../repositories')
 
 class UserService {
+    /**
+ * Регистрация нового пользователя.
+ *
+ * Создаёт пользователя с указанным email, логином и паролем, 
+ * хеширует пароль, присваивает стандартную роль, генерирует токены доступа и активации,
+ * сохраняет их в базе и отправляет письмо с активацией.
+ *
+ * @async
+ * @param {string} email - Email пользователя. Должен быть уникальным.
+ * @param {string} login - Логин пользователя. Должен быть уникальным.
+ * @param {string} password - Пароль пользователя в открытом виде.
+ * @returns {Promise<Object>} Возвращает объект с данными пользователя и токенами:
+ *  - user: {UserDto} DTO пользователя,
+ *  - accessToken: {string} JWT для доступа,
+ *  - refreshToken: {string} JWT для обновления сессии.
+ *
+ * @throws {ApiError.BadRequest} Если email или логин уже существует.
+ * @throws {Error} При других ошибках при работе с базой или сервисами.
+ *
+ * @example
+ * const userData = await userService.registration(
+ *   "example@mail.com", 
+ *   "myLogin", 
+ *   "myPassword123"
+ * );
+ */
     async registration(email, login, password) {  
         const candidateByEmail = await userRepository.findOneBy({email_lower: email.toLowerCase()});
         const candidateByUsername = await userRepository.findOneBy({login: login.toLowerCase()});
@@ -30,7 +56,6 @@ class UserService {
             roleId: role._id
         });
         
-        
         const userDto = new UserDto(user);
         const tokens = tokenService.generateSessionTokens({...userDto});
         
@@ -38,8 +63,8 @@ class UserService {
         await tokenService.saveToken(userDto.id, tokens.refreshToken, 'refresh');
 
         mailService.sendActivationMail(email, `${process.env.API_URL}/api/activate/${activationToken}`)
-            .catch(err => console.error('Ошибка отправки письма', err));
-
+            .catch(err => console.error('Error occured while send mail', err));
+        
         return {
             ...tokens,
             user: userDto
@@ -47,6 +72,27 @@ class UserService {
 
     }
 
+    /**
+ * Активация аккаунта пользователя по токену.
+ *
+ * Находит токен активации в базе, проверяет его валидность и срок действия.
+ * Если токен действителен, активирует пользователя, сохраняет изменения
+ * и удаляет использованный токен.
+ *
+ * @async
+ * @param {string} tokenString - Токен активации, отправленный пользователю по email.
+ * @returns {Promise<void>} Не возвращает данных, завершает процесс активации.
+ *
+ * @throws {ApiError.BadRequest} Если токен недействителен, устарел или пользователь не найден.
+ *
+ * @example
+ * try {
+ *   await userService.activate("some-activation-token");
+ *   console.log("Аккаунт успешно активирован");
+ * } catch (e) {
+ *   console.error(e.message);
+ * }
+ */
     async activate(tokenString) {
         const token = await tokenService.validateActivationToken(tokenString);
         const user = await userRepository.findById(token.userId);
@@ -61,6 +107,32 @@ class UserService {
         await tokenService.removeToken(token.token);
     }
 
+    /**
+ * Авторизация пользователя по логину/email и паролю.
+ *
+ * Определяет, является ли переданный идентификатор email или логином,
+ * ищет пользователя в базе, проверяет совпадение пароля и генерирует
+ * JWT-токены для сессии (access и refresh).
+ * Также меняет идентификатор роли на её название.
+ *
+ * @async
+ * @param {string} identifier - Email или логин пользователя.
+ * @param {string} password - Пароль пользователя.
+ * @returns {Promise<{ accessToken: string, refreshToken: string, user: UserDto }>} 
+ * Объект с токенами и DTO пользователя.
+ *  - user: {UserDto} DTO пользователя,
+ *  - accessToken: {string} JWT для доступа,
+ *  - refreshToken: {string} JWT для обновления сессии.
+ * @throws {ApiError.BadRequest} Если пользователь не найден или пароль неверен.
+ *
+ * @example
+ * try {
+ *   const userData = await userService.login("user@example.com", "mypassword");
+ *   console.log(userData.accessToken);
+ * } catch (e) {
+ *   console.error(e.message);
+ * }
+ */
     async login(identifier, password) {
         const emailRegex = new RegExp(/^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/);
         const isEmail = emailRegex.test(identifier.toLowerCase());
@@ -87,11 +159,53 @@ class UserService {
         return {...tokens, user: userDto}
     }
 
+    /**
+ * Выход пользователя из системы.
+ *
+ * Удаляет указанный refresh-токен из базы данных, чтобы завершить сессию.
+ *
+ * @async
+ * @param {string} refreshToken - Refresh-токен пользователя.
+ * @returns {Promise<Object|null>} Возвращает объект удалённого токена или null, если токен не найден.
+ *
+ * @throws {ApiError} В случае проблем с удалением токена.
+ *
+ * @example
+ * try {
+ *   const result = await userService.logout(userRefreshToken);
+ *   console.log("Токен удалён:", result);
+ * } catch (e) {
+ *   console.error(e.message);
+ * }
+ */
     async logout(refreshToken) {
         const token = await tokenService.removeToken(refreshToken);
         return token;
     }
 
+    /**
+ * Обновление сессии пользователя.
+ *
+ * Валидирует переданный refresh-токен.
+ * Достает из него информацию о пользователе. Ищет токен в базе данных.
+ * Создаёт новые access и refresh токены
+ * Сохраняет новый refresh-токен в базе данных и возвращает их вместе с данными пользователя.
+ *
+ * @async
+ * @param {string} refreshToken - Текущий refresh-токен пользователя.
+ * @returns {Promise<{accessToken: string, refreshToken: string, user: Object}>} 
+ *          Возвращает объект с новым access-токеном, refresh-токеном и DTO пользователя.
+ *
+ * @throws {ApiError.UnauthorizedError} Если refresh-токен отсутствует, недействителен или не найден в базе данных.
+ *
+ * @example
+ * try {
+ *   const userData = await userService.refresh(req.cookies.refreshToken);
+ *   console.log(userData.accessToken);
+ * } catch (e) {
+ *   console.error(e.message);
+ * }
+ */
     async refresh(refreshToken) {
         if(!refreshToken) {
             throw ApiError.UnauthorizedError();
@@ -109,6 +223,24 @@ class UserService {
         return {...tokens, user: userDto}
     }
 
+    /**
+ * Получение списка всех пользователей.
+ *
+ * Выполняет выборку всех пользователей из базы данных.
+ *
+ * @async
+ * @returns {Promise<Array<Object>>} Массив объектов пользователей (моделей или DTO).
+ *
+ * @throws {Error} В случае ошибки при запросе к базе данных.
+ *
+ * @example
+ * try {
+ *   const users = await userService.getAllUsers();
+ *   console.log(users);
+ * } catch (e) {
+ *   console.error(e.message);
+ * }
+ */
     async getAllUsers() {
         const users = await userRepository.findAll();
         return users;

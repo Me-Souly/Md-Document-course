@@ -9,6 +9,25 @@ const EXPIRES = {
 };
 
 class TokenService {
+    /**
+ * Генерирует пару JWT токенов: access и refresh.
+ *
+ * @param {Object} payload - Данные пользователя (обычно DTO), которые будут зашифрованы в токен.
+ * @param {string} payload.id - Уникальный идентификатор пользователя.
+ * @param {string} payload.email - Email пользователя.
+ * @param {string} payload.login - Логин пользователя.
+ * @param {string} payload.name - Имя пользователя.
+ * @param {string} payload.role - Роль пользователя.
+ * @param {boolean} payload.isActivated - Флаг активации аккаунта.
+ * @returns {Object} Объект с двумя токенами:
+ * @returns {string} return.accessToken - JWT с коротким сроком действия (для авторизации).
+ * @returns {string} return.refreshToken - JWT с длинным сроком действия (для обновления сессии).
+ *
+ * @example
+ * const tokens = generateSessionTokens(userDto);
+ * console.log(tokens.accessToken);
+ * console.log(tokens.refreshToken);
+ */
     generateSessionTokens(payload) {
         const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, { expiresIn: process.env.JWT_ACCESS_EXPIRES });
         const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES });
@@ -19,6 +38,19 @@ class TokenService {
         }
     }
 
+    /**
+ * Проверяет и расшифровывает JWT access токен.
+ *
+ * @param {string} token - JWT access токен, полученный от клиента.
+ * @returns {Object|null} Возвращает payload токена (обычно DTO пользователя), если токен валиден,
+ *                        иначе возвращает null.
+ *
+ * @example
+ * const userData = validateAccessToken(accessToken);
+ * if (!userData) {
+ *     // токен не валиден или истёк
+ * }
+ */
     validateAccessToken(token) {
         try {
             const userData = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
@@ -28,6 +60,19 @@ class TokenService {
         }
     }
 
+    /**
+ * Проверяет и расшифровывает JWT refresh токен.
+ *
+ * @param {string} token - JWT refresh токен, полученный от клиента (обычно из cookies).
+ * @returns {Object|null} Возвращает payload токена (обычно DTO пользователя), если токен валиден,
+ *                        иначе возвращает null.
+ *
+ * @example
+ * const userData = validateRefreshToken(refreshToken);
+ * if (!userData) {
+ *     // токен не валиден, пользователь нужно разлогинить
+ * }
+ */
     validateRefreshToken(token) {
         try {
             const userData = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
@@ -37,6 +82,19 @@ class TokenService {
         }
     }
 
+    /**
+ * Проверяет(удаляет) токен активации пользователя.
+ *
+ * @param {string} tokenString - Токен активации, обычно отправляемый по email.
+ * @returns {Object|null} Возвращает объект токена из базы данных, если токен существует и не истёк,
+ *                        иначе возвращает null.
+ *
+ * @example
+ * const tokenData = await validateActivationToken(tokenString);
+ * if (!tokenData) {
+ *     // токен недействителен или истёк, показать ошибку
+ * }
+ */
     async validateActivationToken(tokenString) {
         const token = await tokenRepository.findActivationToken(tokenString);
         
@@ -49,33 +107,57 @@ class TokenService {
         return token;
     }
 
-    // only for one device - one user
+    // один пользователь - одно устройство
+    /**
+ * Сохраняет полученный токен пользователя в базе данных.
+ *
+ * @param {string} userId - ID пользователя, которому принадлежит токен.
+ * @param {string} token - Строка токена (refresh, reset или activation).
+ * @param {string} [type='refresh'] - Тип токена: 'refresh', 'reset' или 'activation'.
+ * @returns {Promise<Object>} Возвращает созданный или обновлённый объект токена.
+ *
+ * @description
+ * Если для пользователя уже существует токен указанного типа, он обновляется.
+ * В противном случае создаётся новый токен с указанием даты создания и срока действия.
+ *
+ * @example
+ * const savedToken = await saveToken(userId, newRefreshToken, 'refresh');
+ */
     async saveToken(userId, token, type = 'refresh') {
-        const tokenData = await tokenRepository.findOneBy({ userId, type });
-
-        if (tokenData) {
-            tokenData.token = token;
-            tokenData.createdAt = new Date();
-            tokenData.expiresAt = new Date(Date.now() + EXPIRES[type]);
-            return tokenData.save();
-        }
-        const savedToken = await tokenRepository.create({
-            userId,
-            token,
-            type,
-            createdAt: new Date(),
-            expiresAt: new Date(Date.now() + EXPIRES[type])
-        });
-
-        return savedToken;
+        const expiresAt = new Date(Date.now() + EXPIRES[type]);
+        return await tokenRepository.saveTokenAtomic(userId, token, type, expiresAt);
     }
 
-
+    /**
+ * Удаляет токен из базы данных.
+ *
+ * @param {string} token - Строка токена для удаления.
+ * @returns {Promise<Object>} Возвращает объект с информацией об удалённом токене (или результат удаления).
+ *
+ * @description
+ * Используется для выхода пользователя или после использования одноразового токена
+ * (например, для активации аккаунта или сброса пароля).
+ *
+ * @example
+ * await removeToken(refreshToken);
+ */
     async removeToken(token) {
         const tokenData = await tokenRepository.deleteToken(token)
         return tokenData;
     }
 
+    /**
+ * Находит refresh-токен в базе данных.
+ *
+ * @param {string} refreshToken - Строка refresh-токена.
+ * @returns {Promise<Object|null>} Возвращает объект токена, если найден, иначе null.
+ *
+ * @description
+ * Используется при обновлении сессии пользователя для проверки валидности refresh-токена.
+ *
+ * @example
+ * const tokenData = await findRefreshToken(refreshToken);
+ */
     async findRefreshToken(refreshToken) {
         const tokenData = await tokenRepository.findRefreshToken(refreshToken)
         return tokenData;

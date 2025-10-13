@@ -13,6 +13,14 @@ class MailService {
         });
     }
 
+    /**
+ * Отправляет пользователю письмо для активации аккаунта.
+ *
+ * @async
+ * @param {string} to - Email адрес получателя.
+ * @param {string} link - Ссылка для активации аккаунта.
+ * @throws {Error} Бросает ошибку, если отправка письма не удалась.
+ */
     async sendActivationMail(to, link) {
         await this.transporter.sendMail({
             from: process.env.SMTP_USER,

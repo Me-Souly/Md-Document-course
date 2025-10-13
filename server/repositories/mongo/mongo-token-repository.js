@@ -46,6 +46,18 @@ class MongoTokenRepository extends TokenRepository {
         const result = await TokenModel.deleteMany({ expiresAt: { $lt: now } });
         return result.deletedCount;
     }
+
+    async saveTokenAtomic(userId, token, type = 'refresh', expiresAt) {
+        const now = new Date();
+
+        const tokenData = await TokenModel.findOneAndUpdate(
+            { userId, type },                     // фильтр
+            { token, createdAt: now, expiresAt }, // обновление
+            { upsert: true, new: true }           // если нет — создаст, вернёт новый
+        );
+
+        return tokenData;
+    }
 }
 
 module.exports = MongoTokenRepository;
