@@ -3,7 +3,7 @@ const router = new Router();
 const {body} = require('express-validator');
 const { authMiddleware, moderatorMiddleware, activatedMiddleware } = require('../middlewares');
 
-const { userController, authController, activationController } = require('../controllers');
+const { userController, authController, activationController, passwordController } = require('../controllers');
 
 router.post('/registration', 
     body('email', 'Email is incorrect').isEmail(),
@@ -13,8 +13,12 @@ router.post('/registration',
 router.post('/login', authController.login);
 router.post('/logout', authController.logout);
 router.get('/activate/:link', activationController.activate);
-router.get('/refresh', authController.refresh);
 router.get('/reset/:link', userController.reset);
 router.get('/users', authMiddleware, activatedMiddleware, userController.getUsers);
+
+router.post('/refresh', passwordController.reset);
+router.post('/requestReset', 
+    body('email', 'Email is incorrect').isEmail(),
+    passwordController.requestReset);
 
 module.exports = router;
