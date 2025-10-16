@@ -41,6 +41,9 @@ const LoginForm: FC = () => {
             <button onClick={() => store.registration(email, username, password)}>
                 Register
             </button>
+            <button onClick={() => store.requestReset(email)}>
+                Reset
+            </button>
         </div>
     );
 };
