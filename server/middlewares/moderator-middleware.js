@@ -11,7 +11,7 @@ module.exports = async function (req, res, next) {
             return next(ApiError.ForbiddenError());               
         }
 
-        next();
+        return next();
     } catch (e) {
         return next(ApiError.ForbiddenError());       
     }
