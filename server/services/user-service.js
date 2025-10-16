@@ -1,0 +1,124 @@
+const bcrypt = require('bcrypt');
+const tokenService = require('./token-service');
+const roleService = require('./role-service');
+const UserDto = require('../dtos/user-dto');
+const ApiError = require('../exceptions/api-error');
+const { userRepository } = require('../repositories');
+
+class UserService {
+    async createUser({email, login, password}) {
+        const hashPassword = await bcrypt.hash(password, 3);
+        const role = await roleService.findOneBy({ name: "user" });
+        
+        return await userRepository.create({
+            email,
+            email_lower: email.toLowerCase(), 
+            login: login.toLowerCase(), 
+            passwordHash: hashPassword,
+            name: login,
+            roleId: role._id
+        });
+    }
+
+    async updateUser(userId, updateData) {
+        const allowedFields = ['name', 'avatarUrl', 'login'];
+        for (const key of Object.keys(updateData)) {
+            if (!allowedFields.includes(key)) {
+                delete updateData[key];
+            }
+        }
+
+        const updatedUser = await userRepository.update(userId, updateData);
+        if (!updatedUser) {
+            throw ApiError.BadRequest('User is not found');
+        }
+
+        return new UserDto(updatedUser);
+    }
+
+    async deleteUser(userId) {
+        return await userRepository.softDelete(userId);
+    }
+
+    /**
+ * Получение списка всех пользователей.
+ *
+ * Выполняет выборку всех пользователей из базы данных.
+ *
+ * @async
+ * @returns {Promise<Array<Object>>} Массив объектов пользователей (моделей или DTO).
+ *
+ * @throws {Error} В случае ошибки при запросе к базе данных.
+ *
+ * @example
+ * try {
+ *   const users = await userService.getAllUsers();
+ *   console.log(users);
+ * } catch (e) {
+ *   console.error(e.message);
+ * }
+ */
+    async getAllUsers() {
+        const users = await userRepository.findAll();
+        return users;
+    }
+
+
+    /**
+ * Регистрация нового пользователя.
+ *
+ * Создаёт пользователя с указанным email, логином и паролем, 
+ * хеширует пароль, присваивает стандартную роль, генерирует токены доступа и активации,
+ * сохраняет их в базе и отправляет письмо с активацией.
+ *
+ * @async
+ * @param {string} email - Email пользователя. Должен быть уникальным.
+ * @param {string} login - Логин пользователя. Должен быть уникальным.
+ * @param {string} password - Пароль пользователя в открытом виде.
+ * @returns {Promise<Object>} Возвращает объект с данными пользователя и токенами:
+ *  - user: {UserDto} DTO пользователя,
+ *  - accessToken: {string} JWT для доступа,
+ *  - refreshToken: {string} JWT для обновления сессии.
+ *
+ * @throws {ApiError.BadRequest} Если email или логин уже существует.
+ * @throws {Error} При других ошибках при работе с базой или сервисами.
+ *
+ * @example
+ * const userData = await userService.registration(
+ *   "example@mail.com", 
+ *   "myLogin", 
+ *   "myPassword123"
+ * );
+ */
+    async registration(email, login, password) { 
+        const candidateByEmail = await userRepository.findOneBy({email_lower: email.toLowerCase()});
+        const candidateByUsername = await userRepository.findOneBy({login: login.toLowerCase()});
+        if (candidateByEmail !== null) {
+            throw ApiError.BadRequest(`User with email ${email} already exists`);
+        }
+        if (candidateByUsername !== null) {
+            throw ApiError.BadRequest(`User with login ${login} already exists`);
+        }
+        const user = await this.createUser({ email, login, password })   
+        
+        const userDto = new UserDto(user);
+        const tokens = tokenService.generateSessionTokens({ ...userDto });
+        
+        await tokenService.saveToken(userDto.id, tokens.refreshToken, 'refresh');
+
+        return {
+            ...tokens,
+            user: userDto
+        }
+    }
+
+    async findOneBy(filter) {
+        return await userRepository.findOneBy(filter);
+    }
+
+    async findById(id) {
+        return await userRepository.findById(id);
+    }
+}
+
+module.exports = new UserService();

@@ -146,20 +146,8 @@ class TokenService {
         return tokenData;
     }
 
-    /**
- * Находит refresh-токен в базе данных.
- *
- * @param {string} refreshToken - Строка refresh-токена.
- * @returns {Promise<Object|null>} Возвращает объект токена, если найден, иначе null.
- *
- * @description
- * Используется при обновлении сессии пользователя для проверки валидности refresh-токена.
- *
- * @example
- * const tokenData = await findRefreshToken(refreshToken);
- */
-    async findRefreshToken(refreshToken) {
-        const tokenData = await tokenRepository.findRefreshToken(refreshToken)
+    async findToken(token, type) {
+        const tokenData = await tokenRepository.findOneBy({token: token, type: type})
         return tokenData;
     }
 }

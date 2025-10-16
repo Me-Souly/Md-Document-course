@@ -38,6 +38,32 @@ class MailService {
                 `
         })
     }
+
+    /**
+ * Отправляет пользователю письмо для сброса пароля.
+ *
+ * @async
+ * @param {string} to - Email адрес получателя.
+ * @param {string} link - Ссылка для сброса пароля.
+ * @throws {Error} Бросает ошибку, если отправка письма не удалась.
+ */
+    async sendResetMail(to, link) {
+        await this.transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to,
+            subject: 'Reset password' + process.env.API_URL,
+            text: '',
+            html:
+                `
+                <div>
+                    <h1>
+                        Для сброса пароля перейдите по ссылке
+                    </h1>
+                    <a href="${link}">${link}</a>
+                </div>
+                `
+        })
+    }
 }
 
 module.exports = new MailService();
