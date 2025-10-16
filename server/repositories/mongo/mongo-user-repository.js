@@ -15,6 +15,15 @@ class MongoUserRepository extends UserRepository {
     async save(entity) { return this.mongo.save(entity); }
     async softDelete(id) { return this.mongo.softDelete(id); }
 
+    async update(id, updateData) {
+        const user = await UserModel.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true }
+        );
+        return user;
+    }
+
     async findByActivationLink(activationLink) {
         return UserModel.findOne({activationLink});
     }
