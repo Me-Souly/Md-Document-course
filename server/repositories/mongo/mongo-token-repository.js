@@ -47,7 +47,7 @@ class MongoTokenRepository extends TokenRepository {
         return result.deletedCount;
     }
 
-    async saveTokenAtomic(userId, token, type = 'refresh', expiresAt) {
+    async saveTokenAtomic(userId, token, type, expiresAt) {
         const now = new Date();
 
         const tokenData = await TokenModel.findOneAndUpdate(
