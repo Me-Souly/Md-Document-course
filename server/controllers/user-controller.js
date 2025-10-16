@@ -24,7 +24,7 @@ class UserController {
         try {
             const resetToken = req.params.link;
             await passwordService.reset(resetToken);
-            return res.redirect(process.env.CLIENT_URL)
+            return res.redirect(process.env.CLIENT_URL);
         } catch (e) {
             next(e);
         }
