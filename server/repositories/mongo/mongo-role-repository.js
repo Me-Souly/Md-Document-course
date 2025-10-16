@@ -1,5 +1,5 @@
-const RoleModel = require('../../models/mongo/role-model');
-const RoleRepository = require('../base/role-repository');
+const { RoleModel } = require('../../models/mongo');
+const { RoleRepository } = require('../base');
 const MongoBaseRepository = require("./mongo-base-repository");
 
 class MongoRoleRepository extends RoleRepository {

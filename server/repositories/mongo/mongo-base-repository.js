@@ -1,4 +1,4 @@
-const BaseRepository = require("../base/base-repository");
+const { BaseRepository } = require("../base");
 
 class MongoBaseRepository extends BaseRepository{
   constructor(model) {

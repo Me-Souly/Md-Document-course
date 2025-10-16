@@ -1,5 +1,5 @@
-const NoteModel = require("../../models/mongo/note-model");
-const NoteRepository = require("../base/note-repository");
+const { NoteModel } = require("../../models/mongo");
+const { NoteRepository } = require("../base");
 const MongoBaseRepository = require("./mongo-base-repository");
 
 class MongoNoteRepository extends NoteRepository {

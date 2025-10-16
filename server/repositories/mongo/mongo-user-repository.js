@@ -1,5 +1,5 @@
-const UserModel = require('../../models/mongo/user-model');
-const UserRepository = require('../base/user-repository');
+const { UserModel } = require('../../models/mongo');
+const { UserRepository } = require('../base');
 const MongoBaseRepository = require('./mongo-base-repository');
 
 class MongoUserRepository extends UserRepository {

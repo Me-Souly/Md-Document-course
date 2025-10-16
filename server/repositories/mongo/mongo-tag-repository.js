@@ -1,5 +1,5 @@
-const TagModel = require("../../models/mongo/tag-model")
-const TagRepository = require("../base/tag-repository");
+const { TagModel } = require("../../models/mongo")
+const { TagRepository } = require("../base");
 const MongoBaseRepository = require("./mongo-base-repository");
 
 class MongoTagRepository extends TagRepository{
