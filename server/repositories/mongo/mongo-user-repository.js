@@ -15,6 +15,15 @@ class MongoUserRepository extends UserRepository {
     async save(entity) { return this.mongo.save(entity); }
     async softDelete(id) { return this.mongo.softDelete(id); }
 
+    async isFieldUnique(field, value, excludeUserId) {
+        const filter = { [field]: value };
+        if (excludeUserId) {
+            filter._id = { $ne: excludeUserId };
+        }
+        const existing = await this.findOneBy(filter);
+        return !existing;
+    }
+
     async update(id, updateData) {
         const user = await UserModel.findByIdAndUpdate(
             id,

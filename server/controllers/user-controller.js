@@ -28,6 +28,30 @@ class UserController {
             next(e);
         }   
     }
+    
+    async updateUser(req, res, next) {
+        try {
+            const updateData = req.body;
+            const userId = req.user.id;
+            const userData = await userService.updateUser(userId, updateData);
+            return res.json(userData);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    async deleteUser(req, res, next) {
+        try {
+            const { password } = req.body;
+            const userId = req.user.id;
+
+            await userService.deleteUser(userId, password);
+
+            return res.json({ success: true, message: 'Account deleted successfully' });
+        } catch (e) {
+            next(e);
+        }
+    }
 }
 
 module.exports = new UserController();

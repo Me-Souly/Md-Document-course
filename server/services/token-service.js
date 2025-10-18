@@ -146,6 +146,10 @@ class TokenService {
         return tokenData;
     }
 
+    async removeTokensByUserId(userId) {
+        return await tokenRepository.removeTokensByUserId(userId);
+    }
+
     async findToken(token, type) {
         const tokenData = await tokenRepository.findOneBy({token: token, type: type})
         return tokenData;

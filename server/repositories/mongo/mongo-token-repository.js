@@ -41,6 +41,10 @@ class MongoTokenRepository extends TokenRepository {
         return TokenModel.deleteOne({token});
     }
 
+    async removeTokensByUserId(userId) {
+        return TokenModel.deleteMany({userId});
+    }
+
     async deleteExpiredTokens() { 
         const now = new Date();
         const result = await TokenModel.deleteMany({ expiresAt: { $lt: now } });
