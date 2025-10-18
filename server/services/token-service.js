@@ -90,7 +90,7 @@ class TokenService {
  *                        иначе возвращает null.
  *
  * @example
- * const tokenData = await validateActivationToken(tokenString);
+ * const tokenData = await validateLinkToken(tokenString, type);
  * if (!tokenData) {
  *     // токен недействителен или истёк, показать ошибку
  * }

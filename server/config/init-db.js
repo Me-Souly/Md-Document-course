@@ -15,7 +15,7 @@ async function initDatabase(roleRepo, userRepo) {
     let admin = await userRepo.findOneBy({ email: process.env.MODERATOR_EMAIL });
     if (!admin) {
         const role = await roleRepo.findOneBy({ name: 'moderator' });
-        const passwordHash = await bcrypt.hash(process.env.MODERATOR_PASSWORD, 3);
+        const passwordHash = await bcrypt.hash(process.env.MODERATOR_PASSWORD, 10);
         const newAdmin = {
             email: process.env.MODERATOR_EMAIL,
             email_lower: process.env.MODERATOR_EMAIL.toLowerCase(),

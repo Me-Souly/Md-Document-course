@@ -7,7 +7,7 @@ const { userRepository } = require('../repositories');
 
 class UserService {
     async createUser({email, login, password}) {
-        const hashPassword = await bcrypt.hash(password, 3);
+        const hashPassword = await bcrypt.hash(password, 10);
         const role = await roleService.findOneBy({ name: "user" });
         
         return await userRepository.create({
@@ -16,12 +16,13 @@ class UserService {
             login: login.toLowerCase(), 
             passwordHash: hashPassword,
             name: login,
+            about: '',
             roleId: role._id
         });
     }
 
     async updateUser(userId, updateData) {
-        const allowedFields = ['name', 'avatarUrl', 'login'];
+        const allowedFields = ['name', 'login', 'about'];
         for (const key of Object.keys(updateData)) {
             if (!allowedFields.includes(key)) {
                 delete updateData[key];
@@ -32,7 +33,6 @@ class UserService {
         if (!updatedUser) {
             throw ApiError.BadRequest('User is not found');
         }
-
         return new UserDto(updatedUser);
     }
 
@@ -62,7 +62,6 @@ class UserService {
         const users = await userRepository.findAll();
         return users;
     }
-
 
     /**
  * Регистрация нового пользователя.
