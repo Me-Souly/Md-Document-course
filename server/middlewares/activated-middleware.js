@@ -8,11 +8,11 @@ module.exports = function (req, res, next) {
 
     try {
         if (!userData.isActivated) {
-            return next(ApiError.ForbiddenError('Аккаунт не активирован. Проверьте email.'));
+            return next(ApiError.ForbiddenError(`Аккаунт не активирован. Проверьте email. ${userData}`));
         }
 
         next();
     } catch (e) {
-        return next(ApiError.ForbiddenError('Аккаунт не активирован. Проверьте email.'))
+        return next(ApiError.ForbiddenError('Вероятно, аккаунт не активирован. Проверьте email.'))
     }
 }
