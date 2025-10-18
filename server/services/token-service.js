@@ -95,8 +95,8 @@ class TokenService {
  *     // токен недействителен или истёк, показать ошибку
  * }
  */
-    async validateActivationToken(tokenString) {
-        const token = await tokenRepository.findActivationToken(tokenString);
+    async validateLinkToken(tokenString, type) {
+        const token = await tokenRepository.findOneBy({token: tokenString, type});
         
         if (!token) throw ApiError.BadRequest(`Token not found ${tokenString}`);
         

@@ -29,12 +29,10 @@ class ActivationService {
     }
 
     async activate(tokenString) {
-        const token = await tokenService.validateActivationToken(tokenString);
+        const token = await tokenService.validateLinkToken(tokenString, 'activation');
 
         const user = await userService.findById(token.userId);
-        if(!user) {
-            throw ApiError.BadRequest('Incorrect activation string');
-        }
+        if (!user) throw ApiError.BadRequest('Incorrect activation string');
 
         user.isActivated = true;
         await user.save();

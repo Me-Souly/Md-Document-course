@@ -53,6 +53,10 @@ class AuthService {
             throw ApiError.BadRequest('User with that username isn\'t find');
         }
 
+        if(user.isDeleted) {
+            throw ApiError.BadRequest('User deleted');
+        }
+
         const isPassEquals = await bcrypt.compare(password, user.passwordHash);
         if(!isPassEquals) {
             throw ApiError.BadRequest('Incorrect password');

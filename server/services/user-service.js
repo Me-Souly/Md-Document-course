@@ -29,6 +29,16 @@ class UserService {
             }
         }
 
+        const allowedUniqueFields = ['login'];
+        for (const field of allowedUniqueFields) {
+            if (updateData[field] !== undefined) {
+                const isUnique = await userRepository.isFieldUnique(field, updateData[field], userId);
+                if (!isUnique) {
+                    throw ApiError.BadRequest(`Поле "${field}" уже занято`);
+                }
+            }
+        }        
+
         const updatedUser = await userRepository.update(userId, updateData);
         if (!updatedUser) {
             throw ApiError.BadRequest('User is not found');
@@ -36,8 +46,22 @@ class UserService {
         return new UserDto(updatedUser);
     }
 
-    async deleteUser(userId) {
-        return await userRepository.softDelete(userId);
+    async deleteUser(userId, password) {
+        const user = await userRepository.findById(userId);
+        if (!user) throw ApiError.BadRequest('User not found');
+
+        const isValid = await bcrypt.compare(password, user.passwordHash);
+        if (!isValid) throw ApiError.BadRequest('Password is incorrect');
+
+        await userRepository.softDelete(userId);
+
+        await tokenService.removeTokensByUserId(userId);
+
+        return true;
+    }
+
+    async save(user) {
+        return await userRepository.save(user);
     }
 
     /**
