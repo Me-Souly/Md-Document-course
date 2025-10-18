@@ -93,8 +93,8 @@ export default class Store {
     async requestReset(email: string) {
         try {
             const response = await PasswordService.requestReset(email);
-            if(response.data.message === "Reset email sent successfully")
-                console.log('yeeeee');
+            if(response.data.success === true)
+                console.log(response.data);
 
         } catch (e) {
             if (axios.isAxiosError(e))
@@ -102,5 +102,15 @@ export default class Store {
             else
                 console.log(e);
         }
+    }
+
+    async changePassword(oldPassword: string, newPassword: string) {
+        try {
+            await PasswordService.changePassword(oldPassword, newPassword);
+        } catch (e) {
+            
+        }
+        console.log(oldPassword);
+        console.log(newPassword);
     }
 }

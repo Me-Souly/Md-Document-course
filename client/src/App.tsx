@@ -9,6 +9,8 @@ import axios from 'axios';
 function App() {
   const {store} = useContext(Context);
   const [users, setUsers] = useState<IUser[]>([]);
+  const [oldPassword, setOldPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
   
   useEffect(() => {
     if(localStorage.getItem('token')) {
@@ -45,15 +47,32 @@ function App() {
     <div>
       <h1>{`User is authorized: ${store.user.email}`}</h1>
       <h1>{store.user.isActivated ? `User is aactivated` : `Check email and activate account`}</h1>
+      <div>
+        <input
+          onChange={e => setOldPassword(e.target.value)}
+          value={oldPassword}
+          type="password"
+          placeholder='oldPassword'
+        />
+        <input
+          onChange={e => setNewPassword(e.target.value)}
+          value={newPassword}
+          type="password"
+          placeholder='newPassword'
+        />
+        <button onClick={() => store.changePassword(oldPassword, newPassword)}>
+          Change password
+        </button>
+      </div>
       <button onClick={() => {
         store.logout();
         setUsers([]);
-        }}>
+      }}>
         Logout
       </button>
       <button onClick={getUsers}>Get User's list</button>
-      {users.map((user, i) => 
-        <div key={user.email}>{user.email}</div>  
+      {users.map((user, i) =>
+        <div key={user.email}>{user.email}</div>
       )}
     </div>
   );

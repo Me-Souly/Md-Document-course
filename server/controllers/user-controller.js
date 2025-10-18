@@ -20,16 +20,6 @@ class UserController {
         }   
     }
 
-    async reset(req, res, next) {
-        try {
-            const resetToken = req.params.link;
-            await passwordService.reset(resetToken);
-            return res.redirect(process.env.CLIENT_URL);
-        } catch (e) {
-            next(e);
-        }
-    }
-
     async getUsers(req, res, next) {
         try {
             const users = await userService.getAllUsers();
