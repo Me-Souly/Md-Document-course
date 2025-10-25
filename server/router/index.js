@@ -5,7 +5,22 @@ const { authMiddleware, moderatorMiddleware, activatedMiddleware, checkUserActiv
 
 const { userController, authController, activationController, passwordController } = require('../controllers');
 
-router.post('/registration', 
+//
+//  auth
+//
+router.post('/login', authController.login);
+router.post('/logout', authController.logout);
+router.post('/refresh', authController.refresh);
+
+//
+//  activation
+//
+router.get('/activate/:token', activationController.activate);
+
+//
+//  user control
+//
+router.post('/users/registration', 
     body('email', 'Email is incorrect').isEmail(),
     body('username', 'Minimal username length is 2').isLength({min: 2}),
     body('password', 'Password length should be between 3 and 32').isLength({min: 3, max: 32}),
