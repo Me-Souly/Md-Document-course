@@ -4,6 +4,8 @@ const TagModel = require('./tag-model');
 const RoleModel = require('./role-model');
 const NoteModel = require('./note-model');
 const CommentModel = require('./comment-model');
+const FolderModel = require('./folder-model');
+const SharedLinkModel = require('./shared-link-model');
 
 module.exports = {
     UserModel,
@@ -12,4 +14,6 @@ module.exports = {
     RoleModel,
     NoteModel,
     CommentModel,
+    FolderModel,
+    SharedLinkModel
 };

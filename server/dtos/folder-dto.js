@@ -1,0 +1,15 @@
+module.exports = class FolderDTO {
+    id;
+    name;
+    parentId;
+    color;
+    updatedAt;
+
+    constructor(folder) {
+        this.id = folder._id;
+        this.name = folder.name;
+        this.parentId = folder.parentId;
+        this.color = folder.color;
+        this.updatedAt = folder.updatedAt;
+    }
+}

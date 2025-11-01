@@ -1,9 +1,23 @@
 const Router = require('express').Router;
 const router = new Router();
-const {body} = require('express-validator');
-const { authMiddleware, moderatorMiddleware, activatedMiddleware, checkUserActive } = require('../middlewares');
+const { body } = require('express-validator');
+const { 
+    authMiddleware, 
+    moderatorMiddleware, 
+    activatedMiddleware, 
+    checkUserActive
+} = require('../middlewares');
 
-const { userController, authController, activationController, passwordController } = require('../controllers');
+const { 
+    userController, 
+    authController, 
+    activationController, 
+    passwordController, 
+    folderController,
+    noteController,
+    noteAccessController,
+    commentController
+} = require('../controllers');
 
 //
 //  auth
@@ -25,24 +39,140 @@ router.post('/users/registration',
     body('username', 'Minimal username length is 2').isLength({min: 2}),
     body('password', 'Password length should be between 3 and 32').isLength({min: 3, max: 32}),
     userController.registration);
-router.post('/login', authController.login);
-router.post('/logout', authController.logout);
-router.get('/refresh', authController.refresh);
-router.get('/activate/:token', activationController.activate);
-router.get('/users', 
-    authMiddleware, 
+
+router.get('/users',
+    authMiddleware,
     checkUserActive,
-    activatedMiddleware, 
+    activatedMiddleware,
     userController.getUsers);
-router.post('/update-user', authMiddleware, userController.updateUser);
-router.post('/delete-account', authMiddleware, userController.deleteUser);
 
+router.patch('/users/me',
+    authMiddleware,
+    checkUserActive,
+    userController.updateUser);
 
-router.post('/request-reset', 
+router.delete('/users/me',
+    authMiddleware,
+    checkUserActive,
+    userController.deleteUser);
+
+//
+//  password 
+//
+router.post("/password/change",
+    authMiddleware,
+    checkUserActive,
+    passwordController.changePassword);
+
+router.post('/password/request-reset', 
     body('email', 'Email is incorrect').isEmail(),
     passwordController.requestReset);
-router.get('/reset/:token', passwordController.validateReset);
-router.post('/reset-password', passwordController.resetPassword);
-router.post("/change-password", authMiddleware, passwordController.changePassword);
+
+router.get('/password/reset/:token', passwordController.validateReset);
+router.post('/password/reset', passwordController.resetPassword);
+
+//
+//  folders
+//
+router.get('/folders', 
+    authMiddleware,
+    folderController.getAll);
+router.get('/folders/:id', 
+    authMiddleware,
+    folderController.getById);
+router.post('/folders', 
+    authMiddleware,    
+    folderController.create);
+router.put('/folders/:id', 
+    authMiddleware,
+    folderController.update);
+router.delete('/folders/:id', 
+    authMiddleware,
+    folderController.delete);
+
+//
+//  notes
+//
+router.get('/notes', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.getUserNotes);
+router.get('/notes/:id', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.getById);
+router.post('/notes', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.create);
+router.put('/notes/:id', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.update);
+router.delete('/notes/:id', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.delete);
+router.patch('/notes/:id/restore', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.restore);
+
+router.get('/folders/:id/notes', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.getNotesInFolder);
+
+router.get('/notes/public', noteController.getAllPublicNotes);
+
+router.post('/notes/:id/access', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.addAccess);
+router.patch('/notes/:id/access/:userId', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.updateAccess);
+router.delete('/notes/:id/access/:userId', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.removeAccess);
+
+router.post('/notes/:id/share-link', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.createShareLink);
+// add connect by share-link later 
+
+router.get('/search/notes', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.searchOwn);
+router.get('/search/notes/public', noteController.searchPublic);
+
+//
+//  comments
+//
+router.get('/notes/:noteId/comments',
+    authMiddleware,
+    // checkUserActive,
+    commentController.getByNote);
+
+router.post('/notes/:noteId/comments',
+    authMiddleware,
+    // checkUserActive,
+    body('content', 'Comment cannot be empty').isLength({ min: 1 }),
+    commentController.create);
+
+router.delete('/comments/:commentId',
+    authMiddleware,
+    // checkUserActive,
+    commentController.delete);
+
+router.post('/comments/:commentId/react',
+    authMiddleware,
+    // checkUserActive,
+    body('type', 'Invalid reaction type').isIn(['like', 'dislike', 'heart', 'laugh', 'sad', 'angry']),
+    commentController.react);
 
 module.exports = router;
