@@ -14,6 +14,9 @@ class MongoRoleRepository extends RoleRepository {
     async create(data) { return this.mongo.create(data); }
     async save(entity) { return this.mongo.save(entity); }
     async softDelete(id) { return this.mongo.softDelete(id); }
+    async updateByIdAtomic(id, updateData, options) { return this.mongo.updateByIdAtomic(id, updateData, options); }
+    async updateOneAtomic(filter, updateData, options) { return this.mongo.updateOneAtomic(filter, updateData, options); }
+    async upsertOneAtomic(filter, data, options) { return this.mongo.upsertOneAtomic(filter, data, options); }
 
     async findByName(name) {
         return RoleModel.findOne({ name });

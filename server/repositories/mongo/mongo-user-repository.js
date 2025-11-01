@@ -14,6 +14,9 @@ class MongoUserRepository extends UserRepository {
     async create(data) { return this.mongo.create(data); }
     async save(entity) { return this.mongo.save(entity); }
     async softDelete(id) { return this.mongo.softDelete(id); }
+    async updateByIdAtomic(id, updateData, options) { return this.mongo.updateByIdAtomic(id, updateData, options); }
+    async updateOneAtomic(filter, updateData, options) { return this.mongo.updateOneAtomic(filter, updateData, options); }
+    async upsertOneAtomic(filter, data, options) { return this.mongo.upsertOneAtomic(filter, data, options); }
 
     async isFieldUnique(field, value, excludeUserId) {
         const filter = { [field]: value };
@@ -24,13 +27,12 @@ class MongoUserRepository extends UserRepository {
         return !existing;
     }
 
-    async update(id, updateData) {
-        const user = await UserModel.findByIdAndUpdate(
-            id,
-            { $set: updateData },
-            { new: true }
-        );
-        return user;
+    async updateByIdAtomic(id, updateData, options = {}) {
+        return this.mongo.updateByIdAtomic(id, updateData, options);
+    }
+
+    async updateOneAtomic(filter, updateData, options = {}) {
+        return this.mongo.updateOneAtomic(filter, updateData, options);
     }
 
     async findByActivationLink(activationLink) {
@@ -38,7 +40,7 @@ class MongoUserRepository extends UserRepository {
     }
 
     async findAll() {
-        return UserModel.find();
+        return this.mongo.findAll();
     }
 }
 

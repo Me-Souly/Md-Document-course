@@ -39,7 +39,7 @@ class UserService {
             }
         }        
 
-        const updatedUser = await userRepository.update(userId, updateData);
+        const updatedUser = await userRepository.updateByIdAtomic(userId, updateData);
         if (!updatedUser) {
             throw ApiError.BadRequest('User is not found');
         }

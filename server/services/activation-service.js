@@ -35,7 +35,7 @@ class ActivationService {
         if (!user) throw ApiError.BadRequest('Incorrect activation string');
 
         user.isActivated = true;
-        await user.save();
+        await userService.save(user);
         
         await tokenService.removeToken(token.token);
     }

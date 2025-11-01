@@ -6,6 +6,7 @@ module.exports = class UserDto {
     role;
     isActivated;
     avatarUrl;
+    about;
 
     constructor(model) {
         this.id = model._id;
@@ -15,5 +16,6 @@ module.exports = class UserDto {
         this.role = model.roleId?.name || model.roleId || 'user';
         this.isActivated = model.isActivated;
         this.avatarUrl = model.avatarUrl || null;
+        this.about = model.about || null;
     }
 }
