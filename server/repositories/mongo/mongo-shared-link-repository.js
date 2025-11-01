@@ -1,11 +1,11 @@
-const { TagModel } = require("../../models/mongo")
-const { TagRepository } = require("../base");
+const { SharedLinkModel } = require("../../models/mongo")
+const { SharedLinkRepository } = require("../base");
 const MongoBaseRepository = require("./mongo-base-repository");
 
-class MongoTagRepository extends TagRepository{
+class MongoSharedLinkRepository extends SharedLinkRepository{
     constructor() {
         super();
-        this.mongo = new MongoBaseRepository(TagModel);
+        this.mongo = new MongoBaseRepository(SharedLinkModel);
     }
 
     async findOneBy(filter) { return this.mongo.findOneBy(filter); }
@@ -17,10 +17,6 @@ class MongoTagRepository extends TagRepository{
     async updateByIdAtomic(id, updateData, options) { return this.mongo.updateByIdAtomic(id, updateData, options); }
     async updateOneAtomic(filter, updateData, options) { return this.mongo.updateOneAtomic(filter, updateData, options); }
     async upsertOneAtomic(filter, data, options) { return this.mongo.upsertOneAtomic(filter, data, options); }
-
-    async findByName(name) {
-        return TagModel.findOne({ name });
-    }
 }
 
-module.exports = MongoTagRepository;
+module.exports = MongoSharedLinkRepository;

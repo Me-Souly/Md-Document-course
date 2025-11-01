@@ -7,6 +7,10 @@ module.exports = class ApiError extends Error {
         this.status = status;
         this.errors = errors;
     }
+    
+    static BadRequest(message, errors = []) {
+        return new ApiError(400, message, errors);
+    }
 
     static UnauthorizedError(message = '') {
         return new ApiError(401, message ? message : 'User isn\'t authorized');
@@ -16,7 +20,7 @@ module.exports = class ApiError extends Error {
         return new ApiError(403, message ? message : 'Not enough access')
     }
 
-    static BadRequest(message, errors = []) {
-        return new ApiError(400, message, errors);
-    } 
+    static NotFoundError(message = '') {
+        return new ApiError(404, message ? message : 'Not found')
+    }
 }
