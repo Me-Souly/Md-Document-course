@@ -1,6 +1,7 @@
 const { folderService } = require('../services');
 
 class FolderController {
+    // GET /api/folders
     async getAll(req, res, next) {
         try {
             const folders = await folderService.getAllFolders(req.user.id);
@@ -10,6 +11,7 @@ class FolderController {
         }
     }
 
+    // GET /api/folders/:id
     async getById(req, res, next) {
         try {
             const folder = await folderService.getFolderById(req.user.id, req.params.id);
@@ -19,6 +21,7 @@ class FolderController {
         }
     }
 
+    // POST /api/folders
     async create(req, res, next) {
         try {
             const folder = await folderService.createFolder(req.user.id, req.body);
@@ -28,6 +31,7 @@ class FolderController {
         }
     }
 
+    // PUT /api/folders/:id
     async update(req, res, next) {
         try {
             const folder = await folderService.updateFolder(req.user.id, req.params.id, req.body);
@@ -37,6 +41,7 @@ class FolderController {
         }
     }
 
+    // DELETE /api/folders/:id
     async delete(req, res, next) {
         try {
             await folderService.deleteFolder(req.user.id, req.params.id);

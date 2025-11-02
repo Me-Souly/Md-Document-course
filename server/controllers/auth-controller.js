@@ -1,18 +1,20 @@
 const { authService } = require('../services');
 
 class AuthController {
-        async login(req, res, next) {
+    // POST /api/login
+    async login(req, res, next) {
         try {
-            const {identifier, password} = req.body;
+            const { identifier, password } = req.body;
             const userData = await authService.login(identifier, password);
-            res.cookie('refreshToken', userData.refreshToken, {maxAge: process.env.JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000, httpOnly: true});
+            res.cookie('refreshToken', userData.refreshToken, { maxAge: process.env.JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000, httpOnly: true });
 
             return res.json(userData);
         } catch (e) {
             next(e);
-        }   
+        }
     }
 
+    // POST /api/logout
     async logout(req, res, next) {
         try {
             const {refreshToken} = req.cookies;
@@ -24,6 +26,7 @@ class AuthController {
         }   
     }
 
+    // Post /api/refresh
     async refresh(req, res, next) {
         try {
             const {refreshToken} = req.cookies;

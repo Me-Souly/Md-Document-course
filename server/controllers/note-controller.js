@@ -1,6 +1,7 @@
 const { noteService } = require("../services");
 
 class NoteController {
+    // POST /api/notes
     async create(req, res, next) {
         try {
             const userId = req.user.id;
@@ -12,6 +13,7 @@ class NoteController {
         }
     }
 
+    // PUT /api/notes/:id
     async update(req, res, next) {
         try {
             const note = await noteService.update(req.params.id, req.body); 
@@ -21,7 +23,7 @@ class NoteController {
         }
     }
 
-    // if isDelete=true - delete from db
+    // DELETE /api/notes/:id
     async delete(req, res, next) {
         try {
             const deletedNote = await noteService.delete(req.params.id);
@@ -31,6 +33,7 @@ class NoteController {
         }
     }
     
+    // PATCH /api/notes/:id/restore
     async restore(req, res, next) {
         try {
             const { id } = req.params;
@@ -47,6 +50,7 @@ class NoteController {
         }
     }
 
+    // GET /api/notes/:id
     async getById(req, res, next) {
         try {
             const note = await noteService.getById(req.params.id); 
@@ -56,6 +60,7 @@ class NoteController {
         }
     }
     
+    // GET /api/notes
     async getUserNotes(req, res, next) {
         try {
             const userId = req.user.id;
@@ -66,6 +71,7 @@ class NoteController {
         }
     }
 
+    // GET /api/folders/:id/notes
     async getNotesInFolder(req, res, next) {
         try {
             const notes = await noteService.getNotesInFolder(req.params.id);
@@ -75,6 +81,7 @@ class NoteController {
         }
     }
 
+    // GET /api/notes/public
     async getAllPublicNotes(req, res, next) {
         try {
             const notes = await noteService.getAllPublicNotes();
@@ -84,16 +91,17 @@ class NoteController {
         }
     }
 
-    async getDeleted(req, res, next) {
-        try {
-            const userId = req.user.id;
-            const notes = await noteService.getDeletedNotes(userId);
-            return res.json(notes);
-        } catch (e) {
-            next(e);
-        }
-    }
+    // async getDeleted(req, res, next) {
+    //     try {
+    //         const userId = req.user.id;
+    //         const notes = await noteService.getDeletedNotes(userId);
+    //         return res.json(notes);
+    //     } catch (e) {
+    //         next(e);
+    //     }
+    // }
 
+    // GET /api/search/notes?query
     async searchOwn(req, res, next) {
         try {
             const userId = req.user.id;
@@ -106,6 +114,7 @@ class NoteController {
         }
     }
 
+    // GET /api/search/notes/public?query
     async searchPublic(req, res, next) {
         try {
             const query = req.query.query || '';

@@ -1,6 +1,7 @@
 const activationService = require('../services/activation-service');
 
 class ActivationController {
+    // GET api/activate/:token
     async activate(req, res, next) {
         try {
             const activationToken = req.params.token;

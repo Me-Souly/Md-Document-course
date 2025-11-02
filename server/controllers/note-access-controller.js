@@ -1,6 +1,7 @@
 const { sharedLinkService } = require("../services");
 
 class NoteAccessController {
+    // POST /api/notes/:id/access
     async addAccess(req, res, next) {
         try {
             const { id } = req.params;
@@ -14,6 +15,7 @@ class NoteAccessController {
         }
     }
 
+    // PATCH /api/notes/:id/access/:userId
     async updateAccess(req, res, next) {
         try {
             const { id, userId } = req.params;
@@ -27,6 +29,7 @@ class NoteAccessController {
         }
     }
     
+    // DELETE /api/notes/:id/access/:userId
     async removeAccess(req, res, next) {
         try {
             const { id, userId } = req.params;
@@ -39,6 +42,7 @@ class NoteAccessController {
         }
     }
 
+    // POST /api/notes/:id/share-link
     async createShareLink(req, res, next) {
         try {
             const { id } = req.params;

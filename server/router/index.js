@@ -125,6 +125,15 @@ router.get('/folders/:id/notes',
 
 router.get('/notes/public', noteController.getAllPublicNotes);
 
+router.get('/search/notes', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.searchOwn);
+router.get('/search/notes/public', noteController.searchPublic);
+
+//
+// notes access
+//
 router.post('/notes/:id/access', 
     authMiddleware, 
     checkUserActive, 
@@ -143,12 +152,6 @@ router.post('/notes/:id/share-link',
     checkUserActive, 
     noteAccessController.createShareLink);
 // add connect by share-link later 
-
-router.get('/search/notes', 
-    authMiddleware, 
-    checkUserActive, 
-    noteController.searchOwn);
-router.get('/search/notes/public', noteController.searchPublic);
 
 //
 //  comments
