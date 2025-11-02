@@ -1,8 +1,9 @@
 const BaseRepository = require('./base-repository');
 
 class CommentRepository extends BaseRepository {
-  async findByNote(noteId) { throw new Error('Not implemented'); }
-  async findByParent(parentId) { throw new Error('Not implemented'); }
+  async getCommentsByNote(noteId) { throw new Error('Not implemented'); }
+  async getReplies(parentId) { throw new Error('Not implemented'); }
+  async toggleReaction(commentId, userId, reactionType) { throw new Error('Not implemented'); }
 }
 
 module.exports = CommentRepository;
