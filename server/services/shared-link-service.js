@@ -1,4 +1,5 @@
-const { noteRepository, shareLinkRepository } = require("../repositories");
+import { noteRepository, shareLinkRepository } from '../repositories/index.js';
+import ApiError from '../exceptions/api-error.js';
 
 class SharedLinkService {
     async updateAccess(noteId, accessEntry, grantedBy) {
@@ -71,4 +72,4 @@ class SharedLinkService {
     }
 }
 
-module.exports = new SharedLinkService();
+export default new SharedLinkService();

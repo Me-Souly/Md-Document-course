@@ -1,19 +1,28 @@
-const UserRepository = require('./mongo-user-repository');
-const RoleRepository = require('./mongo-role-repository');
-const TokenRepository = require('./mongo-token-repository');
-const TagRepository = require('./mongo-tag-repository');
-const NoteRepository = require('./mongo-note-repository');
-const CommentRepository = require('./mongo-comment-repository');
-const FolderRepository = require('./mongo-folder-repository');
-const SharedLinkRepository = require('./mongo-shared-link-repository');
+import MongoUserRepository from './mongo-user-repository.js';
+import MongoRoleRepository from './mongo-role-repository.js';
+import MongoTokenRepository from './mongo-token-repository.js';
+import MongoTagRepository from './mongo-tag-repository.js';
+import MongoNoteRepository from './mongo-note-repository.js';
+import MongoCommentRepository from './mongo-comment-repository.js';
+import MongoFolderRepository from './mongo-folder-repository.js';
+import MongoSharedLinkRepository from './mongo-shared-link-repository.js';
 
-module.exports = {
-    userRepository: new UserRepository(),
-    roleRepository: new RoleRepository(),
-    tokenRepository: new TokenRepository(),
-    tagRepository: new TagRepository(),
-    noteRepository: new NoteRepository(),
-    commentRepository: new CommentRepository(),
-    folderRepository: new FolderRepository(),
-    shareLinkRepository: new SharedLinkRepository(),
+const userRepository = new MongoUserRepository();
+const roleRepository = new MongoRoleRepository();
+const tokenRepository = new MongoTokenRepository();
+const tagRepository = new MongoTagRepository();
+const noteRepository = new MongoNoteRepository();
+const commentRepository = new MongoCommentRepository();
+const folderRepository = new MongoFolderRepository();
+const shareLinkRepository = new MongoSharedLinkRepository();
+
+export {
+    userRepository,
+    roleRepository,
+    tokenRepository,
+    tagRepository,
+    noteRepository,
+    commentRepository,
+    folderRepository,
+    shareLinkRepository,
 };

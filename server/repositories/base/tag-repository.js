@@ -1,7 +1,7 @@
-const BaseRepository = require('./base-repository');
+import BaseRepository from './base-repository.js';
 
 class TagRepository extends BaseRepository {
   async findByName(name) { throw new Error('Not implemented'); }
 }
 
-module.exports = TagRepository;
+export default TagRepository;

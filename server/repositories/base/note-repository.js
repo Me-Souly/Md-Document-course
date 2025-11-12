@@ -1,4 +1,4 @@
-const BaseRepository = require('./base-repository');
+import BaseRepository from './base-repository.js';
 
 class NoteRepository extends BaseRepository {
   async incrementViews(noteId) { throw new Error('Not implemented'); }
@@ -9,4 +9,4 @@ class NoteRepository extends BaseRepository {
   async search(filter, textQuery, options) { throw new Error('Not implemented'); }
 }
 
-module.exports = NoteRepository;
+export default NoteRepository;

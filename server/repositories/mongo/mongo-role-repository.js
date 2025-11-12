@@ -1,6 +1,6 @@
-const { RoleModel } = require('../../models/mongo');
-const { RoleRepository } = require('../base');
-const MongoBaseRepository = require("./mongo-base-repository");
+import { RoleModel } from '../../models/mongo/index.js';
+import { RoleRepository } from '../base/index.js';
+import MongoBaseRepository from './mongo-base-repository.js';
 
 class MongoRoleRepository extends RoleRepository {
     constructor() {
@@ -27,4 +27,4 @@ class MongoRoleRepository extends RoleRepository {
     }
 }
 
-module.exports = MongoRoleRepository;
+export default MongoRoleRepository;

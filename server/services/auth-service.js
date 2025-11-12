@@ -1,9 +1,9 @@
-const bcrypt = require('bcrypt');
-const UserDto = require("../dtos/user-dto");
-const tokenService = require('./token-service');
-const userService = require('./user-service');
-const roleService = require('./role-service');
-const ApiError = require('../exceptions/api-error');
+import bcrypt from 'bcrypt';
+import UserDto from '../dtos/user-dto.js';
+import tokenService from './token-service.js';
+import userService from './user-service.js';
+import roleService from './role-service.js';
+import ApiError from '../exceptions/api-error.js';
 
 class AuthService {
     async createSession(user) {
@@ -134,4 +134,4 @@ class AuthService {
     }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

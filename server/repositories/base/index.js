@@ -1,14 +1,14 @@
-const UserRepository = require('./user-repository');
-const TokenRepository = require('./token-repository');
-const TagRepository = require('./tag-repository');
-const RoleRepository = require('./role-repository');
-const NoteRepository = require('./note-repository');
-const CommentRepository = require('./comment-repository');
-const FolderRepository = require('./folder-repository');
-const BaseRepository = require('./base-repository');
-const SharedLinkRepository = require('./shared-link-repository');
+import UserRepository from './user-repository.js';
+import TokenRepository from './token-repository.js';
+import TagRepository from './tag-repository.js';
+import RoleRepository from './role-repository.js';
+import NoteRepository from './note-repository.js';
+import CommentRepository from './comment-repository.js';
+import FolderRepository from './folder-repository.js';
+import BaseRepository from './base-repository.js';
+import SharedLinkRepository from './shared-link-repository.js';
 
-module.exports = {
+export {
     BaseRepository,
     CommentRepository,
     FolderRepository,

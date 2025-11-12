@@ -1,6 +1,6 @@
-const ApiError = require("../exceptions/api-error");
+import ApiError from '../exceptions/api-error.js';
 
-module.exports = function (req, res, next) {
+const activatedMiddleware = function (req, res, next) {
     const userData = req.user;
     if(!userData) {
         return next(ApiError.UnauthorizedError());
@@ -13,6 +13,8 @@ module.exports = function (req, res, next) {
 
         next();
     } catch (e) {
-        return next(ApiError.ForbiddenError('Вероятно, аккаунт не активирован. Проверьте email.'))
+        return next(ApiError.ForbiddenError('Вероятно, аккаунт не активирован. Проверьте email.'));
     }
-}
+};
+
+export default activatedMiddleware;

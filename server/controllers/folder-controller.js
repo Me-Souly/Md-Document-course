@@ -1,4 +1,4 @@
-const { folderService } = require('../services');
+import { folderService } from '../services/index.js';
 
 class FolderController {
     // GET /api/folders
@@ -52,4 +52,4 @@ class FolderController {
     }
 }
 
-module.exports = new FolderController();
+export default new FolderController();

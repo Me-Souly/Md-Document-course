@@ -1,13 +1,13 @@
-const UserModel = require('./user-model');
-const TokenModel = require('./token-model');
-const TagModel = require('./tag-model');
-const RoleModel = require('./role-model');
-const NoteModel = require('./note-model');
-const CommentModel = require('./comment-model');
-const FolderModel = require('./folder-model');
-const SharedLinkModel = require('./shared-link-model');
+import UserModel from './user-model.js';
+import TokenModel from './token-model.js';
+import TagModel from './tag-model.js';
+import RoleModel from './role-model.js';
+import NoteModel from './note-model.js';
+import CommentModel from './comment-model.js';
+import FolderModel from './folder-model.js';
+import SharedLinkModel from './shared-link-model.js';
 
-module.exports = {
+export {
     UserModel,
     TokenModel,
     TagModel,

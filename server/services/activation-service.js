@@ -1,8 +1,8 @@
-const uuid = require('uuid');
-const ApiError = require('../exceptions/api-error');
-const tokenService = require('./token-service');
-const mailService = require('./mail-service');
-const userService = require('./user-service');
+import { v4 as uuidv4 } from 'uuid';
+import ApiError from '../exceptions/api-error.js';
+import tokenService from './token-service.js';
+import mailService from './mail-service.js';
+import userService from './user-service.js';
 
 
 class ActivationService {
@@ -11,7 +11,7 @@ class ActivationService {
             throw ApiError.BadRequest('Uncorrect User data');
         }
 
-        const activationToken = uuid.v4();
+        const activationToken = uuidv4();
 
         const token = await tokenService.saveToken(
             user.id,
@@ -41,4 +41,4 @@ class ActivationService {
     }
 }
 
-module.exports = new ActivationService();
+export default new ActivationService();

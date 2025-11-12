@@ -1,6 +1,6 @@
-const ApiError = require("../exceptions/api-error")
+import ApiError from '../exceptions/api-error.js';
 
-module.exports = async function (req, res, next) {
+const moderatorMiddleware = async function (req, res, next) {
     if(req.method === 'OPTIONS') {
         next();
     }
@@ -15,4 +15,6 @@ module.exports = async function (req, res, next) {
     } catch (e) {
         return next(ApiError.ForbiddenError());       
     }
-}
+};
+
+export default moderatorMiddleware;

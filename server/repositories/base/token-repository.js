@@ -1,4 +1,4 @@
-const BaseRepository = require("./base-repository");
+import BaseRepository from './base-repository.js';
 
 class TokenRepository extends BaseRepository {
     async findRefreshToken(refreshToken) { throw new Error('Not implemented') }
@@ -10,4 +10,4 @@ class TokenRepository extends BaseRepository {
     async saveTokenAtomic(userId, token, type, expiresAt) { throw new Error('Not implemented'); }
 }
 
-module.exports = TokenRepository;
+export default TokenRepository;

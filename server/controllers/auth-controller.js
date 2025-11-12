@@ -1,4 +1,4 @@
-const { authService } = require('../services');
+import { authService } from '../services/index.js';
 
 class AuthController {
     // POST /api/login
@@ -39,4 +39,4 @@ class AuthController {
     }
 }
 
-module.exports = new AuthController();
+export default new AuthController();

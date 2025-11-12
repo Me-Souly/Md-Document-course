@@ -1,4 +1,4 @@
-const activationService = require('../services/activation-service');
+import activationService from '../services/activation-service.js';
 
 class ActivationController {
     // GET api/activate/:token
@@ -13,4 +13,4 @@ class ActivationController {
     }
 }
 
-module.exports = new ActivationController();
+export default new ActivationController();

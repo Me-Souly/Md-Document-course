@@ -27,4 +27,4 @@ class NoteDto {
   }
 }
 
-module.exports = NoteDto;
+export default NoteDto;

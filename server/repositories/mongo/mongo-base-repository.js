@@ -1,4 +1,4 @@
-const { BaseRepository } = require("../base");
+import { BaseRepository } from '../base/index.js';
 
 class MongoBaseRepository extends BaseRepository {
   constructor(model) {
@@ -71,4 +71,4 @@ class MongoBaseRepository extends BaseRepository {
   }
 }
 
-module.exports = MongoBaseRepository;
+export default MongoBaseRepository;

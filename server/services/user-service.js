@@ -1,9 +1,9 @@
-const bcrypt = require('bcrypt');
-const tokenService = require('./token-service');
-const roleService = require('./role-service');
-const UserDto = require('../dtos/user-dto');
-const ApiError = require('../exceptions/api-error');
-const { userRepository } = require('../repositories');
+import bcrypt from 'bcrypt';
+import tokenService from './token-service.js';
+import roleService from './role-service.js';
+import UserDto from '../dtos/user-dto.js';
+import ApiError from '../exceptions/api-error.js';
+import { userRepository } from '../repositories/index.js';
 
 class UserService {
     async createUser({email, login, password}) {
@@ -144,4 +144,4 @@ class UserService {
     }
 }
 
-module.exports = new UserService();
+export default new UserService();

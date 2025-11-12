@@ -1,4 +1,4 @@
-const { roleRepository } = require("../repositories");
+import { roleRepository } from '../repositories/index.js';
 
 class RoleService {
     async findOneBy(filter) {
@@ -6,4 +6,4 @@ class RoleService {
     }
 }
 
-module.exports = new RoleService();
+export default new RoleService();

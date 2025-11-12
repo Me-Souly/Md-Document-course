@@ -1,4 +1,4 @@
-const BaseRepository = require("./base-repository");
+import BaseRepository from './base-repository.js';
 
 class UserRepository extends BaseRepository {
     async findByActivationLink(activationLink) { throw new Error('Not implemented'); }
@@ -6,4 +6,4 @@ class UserRepository extends BaseRepository {
     async isFieldUnique(field, value, excludeUserId) { throw new Error('Not implemented'); }
 }
 
-module.exports = UserRepository;
+export default UserRepository;

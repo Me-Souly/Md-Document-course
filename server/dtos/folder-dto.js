@@ -1,4 +1,4 @@
-module.exports = class FolderDTO {
+export default class FolderDTO {
     id;
     name;
     parentId;

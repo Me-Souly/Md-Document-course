@@ -1,6 +1,6 @@
-const { FolderModel } = require('../../models/mongo');
-const { FolderRepository } = require("../base");
-const MongoBaseRepository = require("./mongo-base-repository");
+import { FolderModel } from '../../models/mongo/index.js';
+import { FolderRepository } from '../base/index.js';
+import MongoBaseRepository from './mongo-base-repository.js';
 
 class MongoFolderRepository extends FolderRepository {
     constructor() {
@@ -21,4 +21,4 @@ class MongoFolderRepository extends FolderRepository {
 
 }
 
-module.exports = MongoFolderRepository;
+export default MongoFolderRepository;

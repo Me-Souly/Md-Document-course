@@ -1,23 +1,24 @@
-const Router = require('express').Router;
-const router = new Router();
-const { body } = require('express-validator');
-const { 
-    authMiddleware, 
-    moderatorMiddleware, 
-    activatedMiddleware, 
+import { Router } from 'express';
+import { body } from 'express-validator';
+import {
+    authMiddleware,
+    moderatorMiddleware,
+    activatedMiddleware,
     checkUserActive
-} = require('../middlewares');
+} from '../middlewares/index.js';
 
-const { 
-    userController, 
-    authController, 
-    activationController, 
-    passwordController, 
+import {
+    userController,
+    authController,
+    activationController,
+    passwordController,
     folderController,
     noteController,
     noteAccessController,
     commentController
-} = require('../controllers');
+} from '../controllers/index.js';
+
+const router = Router();
 
 //
 //  auth
@@ -177,5 +178,4 @@ router.post('/comments/:commentId/react',
     // checkUserActive,
     body('type', 'Invalid reaction type').isIn(['like', 'dislike', 'heart', 'laugh', 'sad', 'angry']),
     commentController.react);
-
-module.exports = router;
+export default router;

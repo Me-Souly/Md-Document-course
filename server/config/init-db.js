@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt';
 
 async function initDatabase(roleRepo, userRepo) {
     // Инициализация ролей
@@ -30,5 +30,4 @@ async function initDatabase(roleRepo, userRepo) {
     }
 }
 
-
-module.exports = initDatabase;
+export default initDatabase;

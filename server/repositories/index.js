@@ -1,6 +1,2 @@
-const mongoRepositories = require('./mongo');
-// const postgresRepositories = require('./postgres');
-
-module.exports = {
-    ...mongoRepositories,
-};
+export * from './mongo/index.js';
+// export * from './postgres/index.js';

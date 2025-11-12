@@ -1,23 +1,10 @@
-const userService = require('./user-service');
-const authService = require('./auth-service');
-const activationService = require('./activation-service');
-const passwordService = require('./password-service');
-const tokenService = require('./token-service');
-const mailService = require('./mail-service');
-const folderService = require('./folder-service');
-const noteService = require('./note-service');
-const sharedLinkService = require('./shared-link-service');
-const commentService = require('./comment-service')
-
-module.exports = {
-    userService,
-    authService,
-    activationService,
-    passwordService,
-    tokenService,
-    mailService,
-    folderService,
-    noteService,
-    sharedLinkService,
-    commentService,
-};
+export { default as userService } from './user-service.js';
+export { default as authService } from './auth-service.js';
+export { default as activationService } from './activation-service.js';
+export { default as passwordService } from './password-service.js';
+export { default as tokenService } from './token-service.js';
+export { default as mailService } from './mail-service.js';
+export { default as folderService } from './folder-service.js';
+export { default as noteService } from './note-service.js';
+export { default as sharedLinkService } from './shared-link-service.js';
+export { default as commentService } from './comment-service.js';

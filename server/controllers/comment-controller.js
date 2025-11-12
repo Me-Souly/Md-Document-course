@@ -1,4 +1,4 @@
-const { commentService } = require('../services');
+import { commentService } from '../services/index.js';
 
 class CommentController {
     // POST /api/comments/:noteId
@@ -52,4 +52,4 @@ class CommentController {
     }
 }
 
-module.exports = new CommentController();
+export default new CommentController();

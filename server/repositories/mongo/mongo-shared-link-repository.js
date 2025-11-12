@@ -1,6 +1,6 @@
-const { SharedLinkModel } = require("../../models/mongo")
-const { SharedLinkRepository } = require("../base");
-const MongoBaseRepository = require("./mongo-base-repository");
+import { SharedLinkModel } from '../../models/mongo/index.js';
+import { SharedLinkRepository } from '../base/index.js';
+import MongoBaseRepository from './mongo-base-repository.js';
 
 class MongoSharedLinkRepository extends SharedLinkRepository{
     constructor() {
@@ -19,4 +19,4 @@ class MongoSharedLinkRepository extends SharedLinkRepository{
     async upsertOneAtomic(filter, data, options) { return this.mongo.upsertOneAtomic(filter, data, options); }
 }
 
-module.exports = MongoSharedLinkRepository;
+export default MongoSharedLinkRepository;

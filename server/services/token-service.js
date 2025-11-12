@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
-const { tokenRepository } = require('../repositories');
-const ApiError = require('../exceptions/api-error');
+import jwt from 'jsonwebtoken';
+import { tokenRepository } from '../repositories/index.js';
+import ApiError from '../exceptions/api-error.js';
 
 const EXPIRES = {
   refresh: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000,
@@ -156,4 +156,4 @@ class TokenService {
     }
 }
 
-module.exports = new TokenService();
+export default new TokenService();

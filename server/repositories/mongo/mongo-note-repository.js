@@ -1,7 +1,7 @@
-const { NoteModel } = require("../../models/mongo");
-const { NoteRepository } = require("../base");
-const MongoBaseRepository = require("./mongo-base-repository");
-const levenshtein = require('fast-levenshtein')
+import { NoteModel } from '../../models/mongo/index.js';
+import { NoteRepository } from '../base/index.js';
+import MongoBaseRepository from './mongo-base-repository.js';
+import levenshtein from 'fast-levenshtein';
 
 class MongoNoteRepository extends NoteRepository {
     constructor() {
@@ -123,4 +123,4 @@ class MongoNoteRepository extends NoteRepository {
    
 }
 
-module.exports = MongoNoteRepository;
+export default MongoNoteRepository;

@@ -15,4 +15,4 @@ class BaseRepository {
   async count(filter) { throw new Error('Not implemented'); }
 }
 
-module.exports = BaseRepository;
+export default BaseRepository;

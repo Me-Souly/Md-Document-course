@@ -1,4 +1,4 @@
-const { noteService } = require("../services");
+import { noteService } from '../services/index.js';
 
 class NoteController {
     // POST /api/notes
@@ -127,4 +127,4 @@ class NoteController {
     }
 }
 
-module.exports = new NoteController();
+export default new NoteController();

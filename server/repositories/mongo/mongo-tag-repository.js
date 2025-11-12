@@ -1,6 +1,6 @@
-const { TagModel } = require("../../models/mongo")
-const { TagRepository } = require("../base");
-const MongoBaseRepository = require("./mongo-base-repository");
+import { TagModel } from '../../models/mongo/index.js';
+import { TagRepository } from '../base/index.js';
+import MongoBaseRepository from './mongo-base-repository.js';
 
 class MongoTagRepository extends TagRepository{
     constructor() {
@@ -23,4 +23,4 @@ class MongoTagRepository extends TagRepository{
     }
 }
 
-module.exports = MongoTagRepository;
+export default MongoTagRepository;

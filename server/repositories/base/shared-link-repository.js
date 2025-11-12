@@ -1,6 +1,6 @@
-const BaseRepository = require("./base-repository");
+import BaseRepository from './base-repository.js';
 
 class SharedLinkRepository extends BaseRepository {
 }
 
-module.exports = SharedLinkRepository;
+export default SharedLinkRepository;

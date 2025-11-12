@@ -1,6 +1,6 @@
-const ApiError = require("../exceptions/api-error");
-const { commentRepository } = require("../repositories");
-const CommentDto = require('../dtos/comment-dto');
+import ApiError from '../exceptions/api-error.js';
+import { commentRepository } from '../repositories/index.js';
+import CommentDto from '../dtos/comment-dto.js';
 
 class CommentService {
     async create(noteId, authorId, content, parentId = null) {
@@ -37,4 +37,4 @@ class CommentService {
 
 }
 
-module.exports = new CommentService();
+export default new CommentService();

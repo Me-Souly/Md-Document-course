@@ -1,6 +1,6 @@
-const ApiError = require("../exceptions/api-error");
-const { noteRepository } = require("../repositories");
-const NoteDto = require("../dtos/note-dto");
+import ApiError from '../exceptions/api-error.js';
+import { noteRepository } from '../repositories/index.js';
+import NoteDto from '../dtos/note-dto.js';
 
 class NoteService {
     async getById(noteId, userId) {
@@ -97,4 +97,4 @@ class NoteService {
     }
 }
 
-module.exports = new NoteService();
+export default new NoteService();

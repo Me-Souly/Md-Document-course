@@ -1,6 +1,6 @@
-const { UserModel } = require('../../models/mongo');
-const { UserRepository } = require('../base');
-const MongoBaseRepository = require('./mongo-base-repository');
+import { UserModel } from '../../models/mongo/index.js';
+import { UserRepository } from '../base/index.js';
+import MongoBaseRepository from './mongo-base-repository.js';
 
 class MongoUserRepository extends UserRepository {
     constructor() {
@@ -44,4 +44,4 @@ class MongoUserRepository extends UserRepository {
     }
 }
 
-module.exports = MongoUserRepository;
+export default MongoUserRepository;

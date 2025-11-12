@@ -1,7 +1,7 @@
-const { userRepository } = require('../repositories');
-const ApiError = require("../exceptions/api-error");
+import { userRepository } from '../repositories/index.js';
+import ApiError from '../exceptions/api-error.js';
 
-module.exports = async function(req, res, next) {
+const checkUserActive = async function(req, res, next) {
     try {
         const userId = req.user?.id;
         if (!userId) {
@@ -21,4 +21,6 @@ module.exports = async function(req, res, next) {
     } catch (e) {
         throw ApiError.BadRequest();
     }
-}
+};
+
+export default checkUserActive;

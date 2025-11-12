@@ -1,4 +1,4 @@
-const { Schema, model } = require('mongoose');
+import { Schema, model } from 'mongoose';
 
 const FolderSchema = new Schema({
   ownerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -26,4 +26,4 @@ const FolderSchema = new Schema({
 FolderSchema.index({ ownerId: 1, parentId: 1 });
 FolderSchema.index({ name: 1, ownerId: 1 }, { unique: false });
 
-module.exports = model('Folder', FolderSchema);
+export default model('Folder', FolderSchema);

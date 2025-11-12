@@ -1,4 +1,4 @@
-const { Schema, model } = require('mongoose');
+import { Schema, model } from 'mongoose';
 
 const UserSchema = new Schema({
   email: { type: String, required: true },
@@ -18,4 +18,4 @@ UserSchema.pre('save', function (next) {
   next();
 });
 
-module.exports = model('User', UserSchema);
+export default model('User', UserSchema);

@@ -45,4 +45,4 @@ class CommentDto {
   }
 }
 
-module.exports = CommentDto;
+export default CommentDto;

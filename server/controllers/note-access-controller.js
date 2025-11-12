@@ -1,4 +1,4 @@
-const { sharedLinkService } = require("../services");
+import { sharedLinkService } from '../services/index.js';
 
 class NoteAccessController {
     // POST /api/notes/:id/access
@@ -56,4 +56,4 @@ class NoteAccessController {
     }
 }
 
-module.exports = new NoteAccessController();
+export default new NoteAccessController();

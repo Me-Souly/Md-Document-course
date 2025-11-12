@@ -1,6 +1,6 @@
-const { validationResult } = require("express-validator");
-const { passwordService } = require("../services");
-const ApiError = require("../exceptions/api-error");
+import { validationResult } from 'express-validator';
+import { passwordService } from '../services/index.js';
+import ApiError from '../exceptions/api-error.js';
 
 class PasswordController {
     async requestReset(req, res, next) {
@@ -73,4 +73,4 @@ class PasswordController {
     }
 }
 
-module.exports = new PasswordController();
+export default new PasswordController();

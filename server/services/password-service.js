@@ -1,16 +1,16 @@
-const uuid = require('uuid');
-const bcrypt = require('bcrypt');
-const ApiError = require("../exceptions/api-error");
-const mailService = require("./mail-service");
-const tokenService = require("./token-service");
-const userService = require("./user-service");
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcrypt';
+import ApiError from '../exceptions/api-error.js';
+import mailService from './mail-service.js';
+import tokenService from './token-service.js';
+import userService from './user-service.js';
 
 class PasswordService {
     async requestReset(email) {
         const user = await userService.findOneBy({ email_lower: email.toLowerCase() })
         if (!user) throw ApiError.BadRequest(`User with email ${email} is not found`);
 
-        const resetToken = uuid.v4();
+        const resetToken = uuidv4();
 
         const token = await tokenService.saveToken(
             user.id,
@@ -68,4 +68,4 @@ class PasswordService {
 
 }
 
-module.exports = new PasswordService();
+export default new PasswordService();

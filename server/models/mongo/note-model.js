@@ -1,13 +1,11 @@
-// models/note.js
-const { Schema, model } = require('mongoose');
+import { Schema, model } from 'mongoose';
 
 const NoteSchema = new Schema({
   ownerId: { type: Schema.Types.ObjectId, ref: 'User', index: true, required: true },
-
   title: { type: String, default: '' },
-  content: { type: String, default: '' },       // Markdown
-  rendered: { type: String, default: '' },      // Кеш HTML-рендера
   
+  ydocState: { type: Buffer, default: null },
+
   parentId: { type: Schema.Types.ObjectId, ref: 'Note', default: null },
   folderId: { type: Schema.Types.ObjectId, ref: 'Folder', default: null },
 
@@ -49,4 +47,4 @@ NoteSchema.pre('save', function(next) {
   next();
 });
 
-module.exports = model('Note', NoteSchema);
+export default model('Note', NoteSchema);

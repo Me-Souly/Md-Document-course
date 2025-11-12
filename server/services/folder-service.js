@@ -1,6 +1,6 @@
-const { folderRepository } = require('../repositories');
-const FolderDTO = require('../dtos/folder-dto');
-const ApiError = require('../exceptions/api-error');
+import { folderRepository } from '../repositories/index.js';
+import FolderDTO from '../dtos/folder-dto.js';
+import ApiError from '../exceptions/api-error.js';
 
 class FolderService {
     async getAllFolders(userId) {
@@ -44,4 +44,4 @@ class FolderService {
     }
 }
 
-module.exports = new FolderService();
+export default new FolderService();

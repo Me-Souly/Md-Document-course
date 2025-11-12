@@ -1,6 +1,6 @@
-const { CommentModel } = require("../../models/mongo");
-const { CommentRepository } = require("../base");
-const MongoBaseRepository = require("./mongo-base-repository");
+import { CommentModel } from '../../models/mongo/index.js';
+import { CommentRepository } from '../base/index.js';
+import MongoBaseRepository from './mongo-base-repository.js';
 
 class MongoCommentRepository extends CommentRepository {
     constructor() {
@@ -81,4 +81,4 @@ class MongoCommentRepository extends CommentRepository {
     }
 }
 
-module.exports = MongoCommentRepository;
+export default MongoCommentRepository;
