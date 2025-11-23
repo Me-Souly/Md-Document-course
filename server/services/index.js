@@ -6,5 +6,6 @@ export { default as tokenService } from './token-service.js';
 export { default as mailService } from './mail-service.js';
 export { default as folderService } from './folder-service.js';
 export { default as noteService } from './note-service.js';
+export { default as noteAccessService } from './note-access-service.js';
 export { default as sharedLinkService } from './shared-link-service.js';
 export { default as commentService } from './comment-service.js';

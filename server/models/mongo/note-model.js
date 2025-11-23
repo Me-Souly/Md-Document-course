@@ -27,7 +27,9 @@ const NoteSchema = new Schema({
   meta: {
     views: { type: Number, default: 0 },
     lastViewedAt: { type: Date, default: null },
-    excerpt: { type: String, default: '' }
+    excerpt: { type: String, default: '' },
+    // Поле для полнотекстового поиска (извлекается из ydocState)
+    searchableContent: { type: String, default: '' }
   },
   
   isDeleted: { type: Boolean, default: false },
@@ -38,13 +40,9 @@ const NoteSchema = new Schema({
 NoteSchema.index({ ownerId: 1, updatedAt: -1 });
 NoteSchema.index({ isPublic: 1, updatedAt: -1 });
 NoteSchema.index({ parentId: 1 });
-NoteSchema.index({ title: 'text', content: 'text' });
+NoteSchema.index({ folderId: 1 }); // Добавляем индекс для folderId, если используется
+// Составной текстовый индекс для поиска по title и meta.searchableContent
+NoteSchema.index({ title: 'text', 'meta.searchableContent': 'text' });
 
-NoteSchema.pre('save', function(next) {
-  if (!this.meta.excerpt && this.content) {
-    this.meta.excerpt = this.content.slice(0, 150) + '...';
-  }
-  next();
-});
 
 export default model('Note', NoteSchema);

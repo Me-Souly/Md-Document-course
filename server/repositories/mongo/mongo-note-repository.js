@@ -42,6 +42,13 @@ class MongoNoteRepository extends NoteRepository {
         return await NoteModel.find({ ownerId, isDeleted: true });
     }
 
+    async findSharedWithUser({ userId }) {
+        return await NoteModel.find({
+            'access.userId': userId,
+            isDeleted: false
+        }).lean();
+    }
+
     async incrementViews(noteId) {
         const updated = await NoteModel.findByIdAndUpdate(
             noteId,
@@ -68,10 +75,10 @@ class MongoNoteRepository extends NoteRepository {
                 isDeleted: false,
                 $or: [
                     { title: { $regex: regex } },
-                    { content: { $regex: regex } }
+                    { 'meta.searchableContent': { $regex: regex } }
                 ]
             },
-            { title: 1, content: 1 }
+            { title: 1, 'meta.searchableContent': 1 }
         ).lean();
 
         if (!roughMatches.length) return [];
@@ -88,7 +95,7 @@ class MongoNoteRepository extends NoteRepository {
         return roughMatches.filter(note => {
             if (isSimilar(note.title || '', normalizedQuery, maxDistance)) return true;
 
-            const words = (note.content || '').slice(0, 800).toLowerCase().split(/\s+/);
+            const words = (note.meta?.searchableContent || '').slice(0, 800).toLowerCase().split(/\s+/);
             return words.some(word =>
                 queryWords.some(q => isSimilar(word, q, maxDistance, 0.25))
             );
@@ -116,7 +123,7 @@ class MongoNoteRepository extends NoteRepository {
             const regex = new RegExp(query, 'i');
             return await NoteModel.find({
                 ...baseFilter,
-                $or: [{ title: regex }, { content: regex }]
+                $or: [{ title: regex }, { 'meta.searchableContent': regex }]
             }).lean();
         }
     }

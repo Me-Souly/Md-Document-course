@@ -133,12 +133,16 @@ router.get('/search/notes',
 router.get('/search/notes/public', noteController.searchPublic);
 
 //
-// notes access
+// notes access (прямое управление доступом)
 //
 router.post('/notes/:id/access', 
     authMiddleware, 
     checkUserActive, 
     noteAccessController.addAccess);
+router.get('/notes/:id/access', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.getAccessList);
 router.patch('/notes/:id/access/:userId', 
     authMiddleware, 
     checkUserActive, 

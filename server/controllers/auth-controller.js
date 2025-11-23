@@ -6,8 +6,7 @@ class AuthController {
         try {
             const { identifier, password } = req.body;
             const userData = await authService.login(identifier, password);
-            res.cookie('refreshToken', userData.refreshToken, { maxAge: process.env.JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000, httpOnly: true });
-
+            res.cookie('refreshToken', userData.refreshToken, { maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000, httpOnly: true });
             return res.json(userData);
         } catch (e) {
             next(e);
@@ -29,9 +28,9 @@ class AuthController {
     // Post /api/refresh
     async refresh(req, res, next) {
         try {
-            const {refreshToken} = req.cookies;
+            const { refreshToken } = req.cookies;
             const userData = await authService.refresh(refreshToken);
-            res.cookie('refreshToken', userData.refreshToken, {maxAge: process.env.JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000, httpOnly: true})
+            res.cookie('refreshToken', userData.refreshToken, {maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000, httpOnly: true})
             return res.json(userData);
         } catch (e) {
             next(e);

@@ -20,12 +20,13 @@
     "fast-levenshtein": "^3.0.0",
     "jsonwebtoken": "^9.0.2",
     "lib0": "^0.2.114",
+    "lodash.debounce": "^4.0.8",
     "mongodb": "^6.20.0",
     "mongoose": "^8.18.2",
     "nodemailer": "^7.0.6",
     "uuid": "^13.0.0",
     "ws": "^8.18.3",
-    "y-websocket": "^3.0.0",
+    "y-websocket": "^2.1.0",
     "yjs": "^13.6.27"
   },
   "devDependencies": {

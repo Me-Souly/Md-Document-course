@@ -12,7 +12,7 @@ class UserController {
             const { email, username, password } = req.body;
             const userData = await userService.registration(email, username, password);
             await activationService.createActivation(userData.user);
-            res.cookie('refreshToken', userData.refreshToken, {maxAge: process.env.JWT_REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000, httpOnly: true});
+            res.cookie('refreshToken', userData.refreshToken, {maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000, httpOnly: true});
 
             return res.json(userData);
         } catch (e) {

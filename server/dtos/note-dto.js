@@ -2,7 +2,7 @@ class NoteDto {
   constructor(note, userId) {
     this.id = note._id;
     this.title = note.title;
-    this.content = note.content;
+    this.content = note.ydocState;
     this.rendered = note.rendered;
     this.folderId = note.folderId;
     this.isPublic = note.isPublic;
@@ -11,9 +11,24 @@ class NoteDto {
     this.createdAt = note.createdAt;
 
     // определение доступа
-    this.isOwner = note.ownerId === userId;
-    const userAccess = note.access?.find(a => a.userId === userId);
-    this.canEdit = this.isOwner || (userAccess && userAccess.permission === 'edit');
+    this.isOwner = note.ownerId && note.ownerId.toString() === userId?.toString();
+    
+    // Определяем тип доступа пользователя
+    if (this.isOwner) {
+      this.permission = 'edit'; // Владелец всегда имеет полный доступ
+    } else {
+      const userAccess = note.access?.find(a => 
+        a.userId && a.userId.toString() === userId?.toString()
+      );
+      if (userAccess) {
+        this.permission = userAccess.permission; // 'read' или 'edit'
+      } else {
+        this.permission = null; // Нет доступа
+      }
+    }
+    
+    this.canEdit = this.permission === 'edit';
+    this.canRead = this.permission === 'read' || this.permission === 'edit';
 
     // владелец видит, кому дал доступ
     if (this.isOwner && Array.isArray(note.access)) {
