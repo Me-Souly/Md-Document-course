@@ -53,7 +53,8 @@ class NoteController {
     // GET /api/notes/:id
     async getById(req, res, next) {
         try {
-            const note = await noteService.getById(req.params.id); 
+            const userId = req.user.id;
+            const note = await noteService.getById(req.params.id, userId); 
             return res.json(note); 
         } catch (e) {
             next(e);

@@ -2,11 +2,11 @@ import jwt from 'jsonwebtoken';
 import { tokenRepository } from '../repositories/index.js';
 import ApiError from '../exceptions/api-error.js';
 
-const EXPIRES = {
-  refresh: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000,
-  reset: parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES) * 60 * 1000,
-  activation: parseInt(process.env.ACTIVATION_TOKEN_EXPIRES_DAYS) * 24 * 60 * 60 * 1000
-};
+const getExpires = () => ({
+  'refresh': parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS || '30') * 24 * 60 * 60 * 1000,
+  'reset': parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '60') * 60 * 1000,
+  'activation': parseInt(process.env.ACTIVATION_TOKEN_EXPIRES_DAYS || '7') * 24 * 60 * 60 * 1000
+});
 
 class TokenService {
     /**
@@ -124,6 +124,7 @@ class TokenService {
  * const savedToken = await saveToken(userId, newRefreshToken, 'refresh');
  */
     async saveToken(userId, token, type = 'refresh') {
+        const EXPIRES = getExpires();
         const expiresAt = new Date(Date.now() + EXPIRES[type]);
         return await tokenRepository.saveTokenAtomic(userId, token, type, expiresAt);
     }

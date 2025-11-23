@@ -63,7 +63,7 @@ class AuthService {
         }
         const role = await roleService.findOneBy({_id: user.roleId});
         user.roleId = role;
-        const userDto = new UserDto(user);  
+        const userDto = new UserDto(user); 
         const tokens = tokenService.generateSessionTokens({...userDto});
         await tokenService.saveToken(userDto.id, tokens.refreshToken);
         

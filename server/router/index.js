@@ -152,11 +152,27 @@ router.delete('/notes/:id/access/:userId',
     checkUserActive, 
     noteAccessController.removeAccess);
 
+//
+// share links (управление share-ссылками)
+//
 router.post('/notes/:id/share-link', 
     authMiddleware, 
     checkUserActive, 
     noteAccessController.createShareLink);
-// add connect by share-link later 
+router.get('/notes/:id/share-links', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.getShareLinks);
+router.post('/share-link/connect', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.connectByShareLink);
+router.get('/share-link/:token/info', 
+    noteAccessController.getShareLinkInfo);
+router.delete('/share-link/:token', 
+    authMiddleware, 
+    checkUserActive, 
+    noteAccessController.deleteShareLink); 
 
 //
 //  comments
