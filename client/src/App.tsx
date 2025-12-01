@@ -5,6 +5,7 @@ import { useAuthStore } from './hooks/useStores';
 import { observer } from 'mobx-react-lite';
 import { IUser } from './models/IUser';
 import UserService from './service/UserService';
+import { NoteEditorPage } from './pages/NoteEditorPage';
 import axios from 'axios';
 
 function App() {
@@ -45,37 +46,44 @@ function App() {
   }
 
   return (
-    <div>
-      <h1>{`User is authorized: ${store.user.email}`}</h1>
-      <h1>{store.user.isActivated ? `User is aactivated` : `Check email and activate account`}</h1>
-      <div>
-        <input
-          onChange={e => setOldPassword(e.target.value)}
-          value={oldPassword}
-          type="password"
-          placeholder='oldPassword'
-        />
-        <input
-          onChange={e => setNewPassword(e.target.value)}
-          value={newPassword}
-          type="password"
-          placeholder='newPassword'
-        />
-        <button onClick={() => store.changePassword(oldPassword, newPassword)}>
-          Change password
-        </button>
-      </div>
-      <button onClick={() => {
-        store.logout();
-        setUsers([]);
-      }}>
-        Logout
-      </button>
-      <button onClick={getUsers}>Get User's list</button>
-      {users.map((user, i) =>
-        <div key={user.email}>{user.email}</div>
-      )}
-    </div>
+    <BrowserRouter>        
+        <Routes>
+          <Route path="/" element={
+            <div>
+              <h1>{`User is authorized: ${authStore.user.email}`}</h1>
+              <h1>{authStore.user.isActivated ? `User is activated` : `Check email and activate account`}</h1>
+              <div>
+                <input
+                  onChange={e => setOldPassword(e.target.value)}
+                  value={oldPassword}
+                  type="password"
+                  placeholder='oldPassword'
+                />
+                <input
+                  onChange={e => setNewPassword(e.target.value)}
+                  value={newPassword}
+                  type="password"
+                  placeholder='newPassword'
+                />
+                <button onClick={() => authStore.changePassword(oldPassword, newPassword)}>
+                  Change password
+                </button>
+              </div>
+              <button onClick={() => {
+                authStore.logout();
+                setUsers([]);
+              }}>
+                Logout
+              </button>
+              <button onClick={getUsers}>Get User's list</button>
+              {users.map((user, i) =>
+                <div key={user.email}>{user.email}</div>
+              )}
+            </div>
+          } />
+          <Route path="/note/:noteId" element={<NoteEditorPage />} />
+        </Routes>
+    </BrowserRouter>
   );
 }
 
