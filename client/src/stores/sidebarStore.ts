@@ -13,6 +13,7 @@ type NoteNodeInput = {
   id: string;
   title?: string;
   folderId?: string | null;
+  parentId?: string | null;
   isFavorite?: boolean;
   isShared?: boolean;
   meta?: Record<string, any>;
@@ -35,6 +36,7 @@ class sidebarStore {
   selectedNoteId: string | null = null;
   searchQuery = '';
   expandedFolders: Set<string> = new Set();
+  draggingNode: { id: string; type: 'file' | 'folder' } | null = null;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -67,6 +69,87 @@ class sidebarStore {
       this.expandedFolders.delete(folderId);
     } else {
       this.expandedFolders.add(folderId);
+    }
+  }
+
+  // drag & drop
+  startDragging(id: string, type: 'file' | 'folder') {
+    this.draggingNode = { id, type };
+  }
+
+  stopDragging() {
+    this.draggingNode = null;
+  }
+
+  canDropOn(target: FileTreeNode): boolean {
+    if (!this.draggingNode) return false;
+    if (this.draggingNode.id === target.id) return false;
+
+    const draggedNode = this.findNodeById(this.fileTree, this.draggingNode.id);
+    if (!draggedNode) return false;
+
+    // запрещаем кидать в собственного потомка (для папок и заметок с детьми)
+    if (this.isDescendant(draggedNode, target.id)) return false;
+
+    // Папки можно вкладывать только в папки
+    if (this.draggingNode.type === 'folder') {
+      return target.type === 'folder';
+    }
+
+    // Заметки (file) можно вкладывать и в папки, и в другие заметки
+    if (this.draggingNode.type === 'file') {
+      return true;
+    }
+
+    return false;
+  }
+
+  canDropToRoot(): boolean {
+    return !!this.draggingNode;
+  }
+
+  private isDescendant(node: FileTreeNode, targetId: string): boolean {
+    if (!node.children) return false;
+    for (const child of node.children) {
+      if (child.id === targetId) return true;
+      if (this.isDescendant(child, targetId)) return true;
+    }
+    return false;
+  }
+
+  moveNode(dragId: string, dragType: 'file' | 'folder', targetFolderId: string | null) {
+    if (dragType === 'file') {
+      // обновляем только структуру дерева; сервер обновляется на уровне страницы
+      const node = this.findNodeById(this.fileTree, dragId);
+      if (!node) return;
+      // удаляем из старого места
+      this.fileTree = this.removeNodeById(this.fileTree, dragId);
+      node.parentId = targetFolderId ?? undefined;
+      if (targetFolderId) {
+        const parent = this.findNodeById(this.fileTree, targetFolderId);
+        if (parent) {
+          parent.children = parent.children || [];
+          parent.children.push(node);
+          return;
+        }
+      }
+      this.fileTree.push(node);
+    } else {
+      // перемещение папки
+      if (dragId === targetFolderId) return;
+      const node = this.findNodeById(this.fileTree, dragId);
+      if (!node) return;
+      this.fileTree = this.removeNodeById(this.fileTree, dragId);
+      node.parentId = targetFolderId ?? undefined;
+      if (targetFolderId) {
+        const parent = this.findNodeById(this.fileTree, targetFolderId);
+        if (parent && parent.type === 'folder') {
+          parent.children = parent.children || [];
+          parent.children.push(node);
+          return;
+        }
+      }
+      this.fileTree.push(node);
     }
   }
 
@@ -152,23 +235,43 @@ class sidebarStore {
       }
     });
 
-    // Добавляем заметки в соответствующие папки или в корень
+    // Сначала создаём все заметки как отдельные узлы
+    const noteMap = new Map<string, FileTreeNode>();
     notes.forEach((note) => {
-      const fileNode: FileTreeNode = {
+      noteMap.set(note.id, {
         id: note.id,
         name: note.title || 'Untitled',
         type: 'file',
+        parentId: note.parentId ?? undefined,
         isFavorite: note.isFavorite ?? note.meta?.isFavorite ?? note.meta?.favorite ?? false,
         isShared: note.isShared ?? note.meta?.isShared ?? false,
-      };
+        children: [],
+      });
+    });
 
-      if (note.folderId && folderMap.has(note.folderId)) {
-        const parent = folderMap.get(note.folderId)!;
-        parent.children = parent.children || [];
-        parent.children.push(fileNode);
-      } else {
-        rootNodes.push(fileNode);
+    // Затем привязываем заметки к родителям (другим заметкам или папкам) или к корню
+    notes.forEach((note) => {
+      const node = noteMap.get(note.id);
+      if (!node) return;
+
+      // Сначала проверяем parentId (подзаметки)
+      if (note.parentId && noteMap.has(note.parentId)) {
+        const parentNoteNode = noteMap.get(note.parentId)!;
+        parentNoteNode.children = parentNoteNode.children || [];
+        parentNoteNode.children.push(node);
+        return;
       }
+
+      // Затем folderId (заметки внутри папок)
+      if (note.folderId && folderMap.has(note.folderId)) {
+        const parentFolderNode = folderMap.get(note.folderId)!;
+        parentFolderNode.children = parentFolderNode.children || [];
+        parentFolderNode.children.push(node);
+        return;
+      }
+
+      // Иначе — в корень
+      rootNodes.push(node);
     });
 
     this.fileTree = rootNodes;

@@ -4,6 +4,7 @@ import { useSidebarStore } from '../hooks/useStores';
 import { FileTreeNode } from '../types/notes';
 import { useNavigate } from 'react-router-dom';
 import styles from './FileSidebar.module.css';
+import $api from '../http';
 
 // Иконки (можно заменить на реальные иконки из библиотеки или использовать SVG)
 const FileTextIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -138,6 +139,7 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isFolder = node.type === 'folder';
+  const hasChildren = !!node.children && node.children.length > 0;
   const isActive = currentNoteId === node.id;
   const isExpanded = sidebarStore.isFolderExpanded(node.id);
 
@@ -171,17 +173,81 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
     sidebarStore.toggleFolder(node.id);
   };
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    sidebarStore.startDragging(node.id, node.type);
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    sidebarStore.stopDragging();
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!sidebarStore.canDropOn(node)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dragging = sidebarStore.draggingNode;
+    if (!dragging) return;
+
+    if (!sidebarStore.canDropOn(node)) return;
+
+    // делаем целевой узел родителем: и папки, и заметки могут иметь детей
+    const targetId = node.id;
+    sidebarStore.moveNode(dragging.id, dragging.type, targetId);
+    sidebarStore.stopDragging();
+
+    // синхронизация с сервером
+    if (dragging.type === 'file') {
+      // перемещение заметки
+      const update: any = {};
+      if (node.type === 'folder') {
+        // заметка внутри папки
+        update.folderId = node.id;
+        update.parentId = null;
+      } else {
+        // подзаметка внутри другой заметки
+        update.parentId = node.id;
+        // folderId не трогаем — останется как было
+      }
+
+      $api.put(`/notes/${dragging.id}`, update).catch((err) => {
+        console.error('Failed to update note position:', err);
+      });
+    } else {
+      // перемещение папки внутрь другой папки
+      if (node.type === 'folder') {
+        $api
+          .put(`/folders/${dragging.id}`, { parentId: node.id })
+          .catch((err) => {
+            console.error('Failed to update folder position:', err);
+          });
+      }
+    }
+  };
+
   return (
     <div>
       <div
         className={cn(
           styles.treeNode,
-          isActive && styles.treeNodeActive,
-          !collapsed && level > 0 && styles.treeNodeNested
+          isActive && styles.treeNodeActive
         )}
+        style={!collapsed && level > 0 ? { marginLeft: level * 18 } : undefined}
         onClick={handleClick}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
-        {isFolder && !collapsed && (
+        {hasChildren && !collapsed && (
           <button
             onClick={handleExpandClick}
             className={styles.expandButton}
@@ -271,7 +337,7 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
         )}
       </div>
 
-      {isFolder && isExpanded && !collapsed && node.children && (
+      {hasChildren && isExpanded && !collapsed && node.children && (
         <div className={styles.treeNodeChildren}>
           {node.children.map((child) => (
             <TreeNode
@@ -380,7 +446,37 @@ export const FileSidebar: React.FC<FileSidebarProps> = observer(({ currentNoteId
 
       {/* File Tree */}
       <div className={styles.fileTree}>
-        <div className={styles.fileTreeContent}>
+        <div
+          className={styles.fileTreeContent}
+          onDragOver={(e) => {
+            if (!sidebarStore.canDropToRoot()) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const dragging = sidebarStore.draggingNode;
+            if (!dragging || !sidebarStore.canDropToRoot()) return;
+            sidebarStore.moveNode(dragging.id, dragging.type, null);
+            sidebarStore.stopDragging();
+
+            // дроп в корень: обнуляем parentId (и folderId для заметок)
+            if (dragging.type === 'file') {
+              $api
+                .put(`/notes/${dragging.id}`, { parentId: null, folderId: null })
+                .catch((err) => {
+                  console.error('Failed to move note to root:', err);
+                });
+            } else {
+              $api
+                .put(`/folders/${dragging.id}`, { parentId: null })
+                .catch((err) => {
+                  console.error('Failed to move folder to root:', err);
+                });
+            }
+          }}
+        >
           {filteredTree.map((node) => (
             <TreeNode
               key={node.id}

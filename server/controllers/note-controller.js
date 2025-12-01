@@ -16,7 +16,8 @@ class NoteController {
     // PUT /api/notes/:id
     async update(req, res, next) {
         try {
-            const note = await noteService.update(req.params.id, req.body); 
+            const userId = req.user.id;
+            const note = await noteService.update(req.params.id, userId, req.body); 
             return res.json(note);
         } catch (e) {
             next(e);

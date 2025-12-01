@@ -5,6 +5,7 @@ class NoteDto {
     // this.content = note.ydocState;
     this.rendered = note.rendered;
     this.folderId = note.folderId;
+    this.parentId = note.parentId;
     this.isPublic = note.isPublic;
     this.meta = note.meta;
     this.updatedAt = note.updatedAt;
