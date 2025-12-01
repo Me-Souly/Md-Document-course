@@ -1,5 +1,5 @@
-import React, { FC, useContext, useState } from 'react';
-import { Context } from '../index';
+import React, { FC, useState } from 'react';
+import { useAuthStore } from '../hooks/useStores';
 import { observer } from 'mobx-react-lite';
 
 const LoginForm: FC = () => {
@@ -7,7 +7,7 @@ const LoginForm: FC = () => {
     const [email, setEmail] = useState<string>('');
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-    const {store} = useContext(Context);
+    const authStore = useAuthStore();
 
     return (
         <div>
@@ -35,13 +35,13 @@ const LoginForm: FC = () => {
                 type="text" 
                 placeholder='Username/Mail'
             />
-            <button onClick={() => store.login(identifier, password)}>
+            <button onClick={() => authStore.login(identifier, password)}>
                 Login
             </button>
-            <button onClick={() => store.registration(email, username, password)}>
+            <button onClick={() => authStore.registration(email, username, password)}>
                 Register
             </button>
-            <button onClick={() => store.requestReset(email)}>
+            <button onClick={() => authStore.requestReset(email)}>
                 Reset
             </button>
         </div>
