@@ -138,10 +138,14 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
   const sidebarStore = useSidebarStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [inputValue, setInputValue] = useState('');
   const isFolder = node.type === 'folder';
   const hasChildren = !!node.children && node.children.length > 0;
   const isActive = currentNoteId === node.id;
   const isExpanded = sidebarStore.isFolderExpanded(node.id);
+  const isEditing = sidebarStore.isEditing(node.id);
+  const editingMode = sidebarStore.getEditingMode();
 
   // Закрытие dropdown при клике вне его
   useEffect(() => {
@@ -160,11 +164,222 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
     };
   }, [showDropdown]);
 
+  // Фокус на input при начале редактирования
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+      if (editingMode === 'rename') {
+        setInputValue(node.name);
+      } else {
+        setInputValue('');
+      }
+    }
+  }, [isEditing, editingMode, node.name]);
+
   const handleClick = () => {
+    if (isEditing) return;
     if (isFolder) {
       sidebarStore.toggleFolder(node.id);
     } else {
       onSelectNote(node.id);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const trimmed = inputValue.trim();
+      if (!trimmed) {
+        if (editingMode === 'rename') {
+          sidebarStore.stopEditing();
+        } else {
+          // Отменяем создание, если пустое имя
+          sidebarStore.stopEditing();
+        }
+        return;
+      }
+
+      if (editingMode === 'rename') {
+        if (trimmed === node.name) {
+          sidebarStore.stopEditing();
+          return;
+        }
+        if (node.type === 'folder') {
+          $api
+            .put(`/folders/${node.id}`, { title: trimmed })
+            .then((res) => {
+              sidebarStore.updateNode(node.id, { name: res.data.name || res.data.title || trimmed });
+              sidebarStore.stopEditing();
+            })
+            .catch((err) => {
+              console.error('Failed to rename folder:', err);
+              sidebarStore.stopEditing();
+            });
+        } else {
+          $api
+            .put(`/notes/${node.id}`, { title: trimmed })
+            .then((res) => {
+              sidebarStore.updateNode(node.id, { name: res.data.title || trimmed });
+              sidebarStore.stopEditing();
+            })
+            .catch((err) => {
+              console.error('Failed to rename note:', err);
+              sidebarStore.stopEditing();
+            });
+        }
+      } else if (editingMode === 'create-folder') {
+        $api
+          .post('/folders', { title: trimmed, parentId: sidebarStore.creatingParentId })
+          .then((res) => {
+            sidebarStore.addNodeFromServer({
+              id: res.data.id,
+              title: res.data.name || res.data.title || trimmed,
+              type: 'folder',
+              parentId: res.data.parentId,
+            });
+            if (sidebarStore.creatingParentId) {
+              sidebarStore.expandedFolders.add(sidebarStore.creatingParentId);
+            }
+            sidebarStore.stopEditing();
+          })
+          .catch((err) => {
+            console.error('Failed to create folder:', err);
+            sidebarStore.stopEditing();
+          });
+      } else if (editingMode === 'create-note') {
+        $api
+          .post('/notes', { title: trimmed, folderId: sidebarStore.creatingParentId })
+          .then((res) => {
+            sidebarStore.addNodeFromServer({
+              id: res.data.id,
+              title: res.data.title,
+              type: 'file',
+              folderId: res.data.folderId,
+            });
+            if (sidebarStore.creatingParentId) {
+              sidebarStore.expandedFolders.add(sidebarStore.creatingParentId);
+            }
+            sidebarStore.stopEditing();
+          })
+          .catch((err) => {
+            console.error('Failed to create note in folder:', err);
+            sidebarStore.stopEditing();
+          });
+      } else if (editingMode === 'create-subnote') {
+        $api
+          .post('/notes', { title: trimmed, parentId: sidebarStore.creatingParentId })
+          .then((res) => {
+            sidebarStore.addNodeFromServer({
+              id: res.data.id,
+              title: res.data.title,
+              type: 'file',
+              parentId: res.data.parentId,
+            });
+            if (sidebarStore.creatingParentId) {
+              sidebarStore.expandedFolders.add(sidebarStore.creatingParentId);
+            }
+            sidebarStore.stopEditing();
+          })
+          .catch((err) => {
+            console.error('Failed to create sub-note:', err);
+            sidebarStore.stopEditing();
+          });
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      sidebarStore.stopEditing();
+    }
+  };
+
+  const handleInputBlur = () => {
+    // При потере фокуса сохраняем, если есть значение
+    if (editingMode === 'rename') {
+      const trimmed = inputValue.trim();
+      if (trimmed && trimmed !== node.name) {
+        if (node.type === 'folder') {
+          $api
+            .put(`/folders/${node.id}`, { title: trimmed })
+            .then((res) => {
+              sidebarStore.updateNode(node.id, { name: res.data.name || res.data.title || trimmed });
+            })
+            .catch((err) => console.error('Failed to rename folder:', err));
+        } else {
+          $api
+            .put(`/notes/${node.id}`, { title: trimmed })
+            .then((res) => {
+              sidebarStore.updateNode(node.id, { name: res.data.title || trimmed });
+            })
+            .catch((err) => console.error('Failed to rename note:', err));
+        }
+      }
+      sidebarStore.stopEditing();
+    } else {
+      // Для создания - сохраняем при потере фокуса, если есть значение
+      const trimmed = inputValue.trim();
+      if (trimmed) {
+        if (editingMode === 'create-folder') {
+          $api
+            .post('/folders', { title: trimmed, parentId: sidebarStore.creatingParentId })
+            .then((res) => {
+              sidebarStore.addNodeFromServer({
+                id: res.data.id,
+                title: res.data.name || res.data.title || trimmed,
+                type: 'folder',
+                parentId: res.data.parentId,
+              });
+              if (sidebarStore.creatingParentId) {
+                sidebarStore.expandedFolders.add(sidebarStore.creatingParentId);
+              }
+              sidebarStore.stopEditing();
+            })
+            .catch((err) => {
+              console.error('Failed to create folder:', err);
+              sidebarStore.stopEditing();
+            });
+        } else if (editingMode === 'create-note') {
+          $api
+            .post('/notes', { title: trimmed, folderId: sidebarStore.creatingParentId })
+            .then((res) => {
+              sidebarStore.addNodeFromServer({
+                id: res.data.id,
+                title: res.data.title,
+                type: 'file',
+                folderId: res.data.folderId,
+              });
+              if (sidebarStore.creatingParentId) {
+                sidebarStore.expandedFolders.add(sidebarStore.creatingParentId);
+              }
+              sidebarStore.stopEditing();
+            })
+            .catch((err) => {
+              console.error('Failed to create note in folder:', err);
+              sidebarStore.stopEditing();
+            });
+        } else if (editingMode === 'create-subnote') {
+          $api
+            .post('/notes', { title: trimmed, parentId: sidebarStore.creatingParentId })
+            .then((res) => {
+              sidebarStore.addNodeFromServer({
+                id: res.data.id,
+                title: res.data.title,
+                type: 'file',
+                parentId: res.data.parentId,
+              });
+              if (sidebarStore.creatingParentId) {
+                sidebarStore.expandedFolders.add(sidebarStore.creatingParentId);
+              }
+              sidebarStore.stopEditing();
+            })
+            .catch((err) => {
+              console.error('Failed to create sub-note:', err);
+              sidebarStore.stopEditing();
+            });
+        }
+      } else {
+        // Отменяем создание, если пусто
+        sidebarStore.stopEditing();
+      }
     }
   };
 
@@ -272,17 +487,24 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
 
         {!collapsed && (
           <>
-            <span className={styles.nodeName}>{node.name}</span>
-
-            {node.isFavorite && (
-              <StarIcon className={cn(styles.iconSmall, styles.starIcon)} filled />
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                type="text"
+                className={styles.nodeNameInput}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                onBlur={handleInputBlur}
+                onClick={(e) => e.stopPropagation()}
+                placeholder={editingMode === 'rename' ? node.name : 'Enter name...'}
+              />
+            ) : (
+              <span className={styles.nodeName}>{node.name}</span>
             )}
 
-            {node.isShared && (
-              <UsersIcon className={cn(styles.iconSmall, styles.iconPrimary)} />
-            )}
-
-            <div className={styles.dropdown} ref={dropdownRef}>
+            {!isEditing && (
+              <div className={styles.dropdown} ref={dropdownRef}>
               <button
                 className={styles.dropdownTrigger}
                 onClick={(e) => {
@@ -294,34 +516,55 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
               </button>
               {showDropdown && (
                 <div className={styles.dropdownMenu}>
-                  <button 
+                  <button
                     className={styles.dropdownItem}
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowDropdown(false);
+                      sidebarStore.startEditing(node.id, 'rename');
                     }}
                   >
                     Rename
                   </button>
-                  <button 
-                    className={styles.dropdownItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowDropdown(false);
-                    }}
-                  >
-                    Share
-                  </button>
-                  <button 
-                    className={styles.dropdownItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowDropdown(false);
-                    }}
-                  >
-                    Move
-                  </button>
-                  <button 
+
+                  {isFolder ? (
+                    <>
+                      <button
+                        className={styles.dropdownItem}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDropdown(false);
+                          sidebarStore.startEditing(`temp-folder-${Date.now()}`, 'create-folder', node.id);
+                        }}
+                      >
+                        Create folder
+                      </button>
+
+                      <button
+                        className={styles.dropdownItem}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDropdown(false);
+                          sidebarStore.startEditing(`temp-note-${Date.now()}`, 'create-note', node.id);
+                        }}
+                      >
+                        Create note
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className={styles.dropdownItem}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDropdown(false);
+                        sidebarStore.startEditing(`temp-subnote-${Date.now()}`, 'create-subnote', node.id);
+                      }}
+                    >
+                      Create subnote
+                    </button>
+                  )}
+
+                  <button
                     className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -332,14 +575,15 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
                   </button>
                 </div>
               )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </div>
 
-      {hasChildren && isExpanded && !collapsed && node.children && (
+      {isExpanded && !collapsed && (
         <div className={styles.treeNodeChildren}>
-          {node.children.map((child) => (
+          {node.children && node.children.map((child) => (
             <TreeNode
               key={child.id}
               node={child}
@@ -349,6 +593,21 @@ const TreeNode: React.FC<TreeNodeProps> = observer(({ node, level, collapsed, cu
               onSelectNote={onSelectNote}
             />
           ))}
+          {sidebarStore.creatingParentId === node.id && sidebarStore.editingNodeId && sidebarStore.editingNodeId.startsWith('temp-') && (
+            <TreeNode
+              key={sidebarStore.editingNodeId}
+              node={{
+                id: sidebarStore.editingNodeId,
+                name: '',
+                type: sidebarStore.editingMode === 'create-folder' ? 'folder' : 'file',
+                parentId: node.id,
+              }}
+              level={level + 1}
+              collapsed={collapsed}
+              currentNoteId={currentNoteId}
+              onSelectNote={onSelectNote}
+            />
+          )}
         </div>
       )}
     </div>

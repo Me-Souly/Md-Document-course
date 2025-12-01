@@ -37,6 +37,9 @@ class sidebarStore {
   searchQuery = '';
   expandedFolders: Set<string> = new Set();
   draggingNode: { id: string; type: 'file' | 'folder' } | null = null;
+  editingNodeId: string | null = null;
+  editingMode: 'rename' | 'create-folder' | 'create-note' | 'create-subnote' | null = null;
+  creatingParentId: string | null = null;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -54,6 +57,57 @@ class sidebarStore {
 
   setFileTree(tree: FileTreeNode[]) {
     this.fileTree = tree;
+  }
+
+  updateNode(id: string, data: Partial<Pick<FileTreeNode, 'name' | 'parentId'>>) {
+    const node = this.findNodeById(this.fileTree, id);
+    if (!node) return;
+    Object.assign(node, data);
+  }
+
+  addNodeFromServer(entity: { id: string; title: string; type: 'file' | 'folder'; parentId?: string | null; folderId?: string | null }) {
+    const node: FileTreeNode = {
+      id: entity.id,
+      name: entity.title || 'Untitled',
+      type: entity.type === 'folder' ? 'folder' : 'file',
+      parentId: entity.parentId ?? undefined,
+      children: [],
+    };
+
+    if (node.type === 'folder') {
+      if (node.parentId) {
+        const parent = this.findNodeById(this.fileTree, node.parentId);
+        if (parent && parent.type === 'folder') {
+          parent.children = parent.children || [];
+          parent.children.push(node);
+          return;
+        }
+      }
+      this.fileTree.push(node);
+      return;
+    }
+
+    // file: сначала пытаемся как подзаметку
+    if (entity.parentId) {
+      const parentNote = this.findNodeById(this.fileTree, entity.parentId);
+      if (parentNote) {
+        parentNote.children = parentNote.children || [];
+        parentNote.children.push(node);
+        return;
+      }
+    }
+
+    // потом как заметку внутри папки
+    if (entity.folderId) {
+      const parentFolder = this.findNodeById(this.fileTree, entity.folderId);
+      if (parentFolder && parentFolder.type === 'folder') {
+        parentFolder.children = parentFolder.children || [];
+        parentFolder.children.push(node);
+        return;
+      }
+    }
+
+    this.fileTree.push(node);
   }
 
   setSelectedNoteId(noteId: string | null) {
@@ -317,6 +371,30 @@ class sidebarStore {
     }
 
     return result;
+  }
+
+  // Редактирование узлов
+  startEditing(nodeId: string, mode: 'rename' | 'create-folder' | 'create-note' | 'create-subnote', parentId?: string | null) {
+    this.editingNodeId = nodeId;
+    this.editingMode = mode;
+    this.creatingParentId = parentId ?? null;
+    if (parentId) {
+      this.expandedFolders.add(parentId);
+    }
+  }
+
+  stopEditing() {
+    this.editingNodeId = null;
+    this.editingMode = null;
+    this.creatingParentId = null;
+  }
+
+  isEditing(nodeId: string): boolean {
+    return this.editingNodeId === nodeId;
+  }
+
+  getEditingMode(): 'rename' | 'create-folder' | 'create-note' | 'create-subnote' | null {
+    return this.editingMode;
   }
 }
 

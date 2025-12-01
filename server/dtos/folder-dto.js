@@ -7,7 +7,7 @@ export default class FolderDTO {
 
     constructor(folder) {
         this.id = folder._id;
-        this.name = folder.name;
+        this.name = folder.title;
         this.parentId = folder.parentId;
         this.color = folder.color;
         this.updatedAt = folder.updatedAt;
