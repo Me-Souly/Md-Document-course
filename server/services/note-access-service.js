@@ -1,5 +1,6 @@
 import { noteRepository } from '../repositories/index.js';
 import ApiError from '../exceptions/api-error.js';
+import NoteDto from '../dtos/note-dto.js';
 
 class NoteAccessService {
     /**
@@ -43,7 +44,8 @@ class NoteAccessService {
         }
 
         await noteRepository.updateByIdAtomic(noteId, { access: note.access });
-        return await noteRepository.findById(noteId);
+        const noteData = await noteRepository.findById(noteId); 
+        return new NoteDto(noteData);
     }
 
     /**
@@ -78,7 +80,8 @@ class NoteAccessService {
         );
 
         await noteRepository.updateByIdAtomic(noteId, { access: filtered });
-        return await noteRepository.findById(noteId);
+        const noteData = await noteRepository.findById(noteId);
+        return new NoteDto(noteData);
     }
 
     /**

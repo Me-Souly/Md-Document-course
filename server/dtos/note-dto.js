@@ -2,7 +2,7 @@ class NoteDto {
   constructor(note, userId) {
     this.id = note._id;
     this.title = note.title;
-    this.content = note.ydocState;
+    // this.content = note.ydocState;
     this.rendered = note.rendered;
     this.folderId = note.folderId;
     this.isPublic = note.isPublic;
@@ -22,6 +22,9 @@ class NoteDto {
       );
       if (userAccess) {
         this.permission = userAccess.permission; // 'read' или 'edit'
+      } else if (note.isPublic) {
+        // Публичные заметки доступны для чтения даже без явного доступа
+        this.permission = 'read';
       } else {
         this.permission = null; // Нет доступа
       }

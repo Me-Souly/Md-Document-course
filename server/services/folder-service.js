@@ -10,7 +10,7 @@ class FolderService {
 
     async getFolderById(userId, folderId) {
         const folder = await folderRepository.findOneBy({ _id: folderId, ownerId: userId, isDeleted: false });
-        if (!folder) throw ApiError.NotFound('Folder not found');
+        if (!folder) throw ApiError.NotFoundError('Folder not found');
         return new FolderDTO(folder);
     }
 
@@ -30,7 +30,7 @@ class FolderService {
             { _id: folderId, ownerId: userId, isDeleted: false },
             data
         );
-        if (!folder) throw ApiError.NotFound('Folder not found');
+        if (!folder) throw ApiError.NotFoundError('Folder not found');
         return new FolderDTO(folder);
     }
 
@@ -39,7 +39,7 @@ class FolderService {
             { _id: folderId, ownerId: userId, isDeleted: false },
             { isDeleted: true, deletedAt: new Date() }
         );
-        if (!folder) throw ApiError.NotFound('Folder not found');
+        if (!folder) throw ApiError.NotFoundError('Folder not found');
         return true;
     }
 }

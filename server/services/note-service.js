@@ -6,7 +6,7 @@ import { NoteModel } from '../models/mongo/index.js';
 class NoteService {
     async getById(noteId, userId) {
         const note = await noteRepository.findById(noteId);
-        if (!note) throw ApiError.NotFound("Note not found");
+        if (!note) throw ApiError.NotFoundError("Note not found");
         return new NoteDto(note, userId);
     }
 
@@ -22,13 +22,13 @@ class NoteService {
 
     async update(noteId, userId, data) {
         const updated = await noteRepository.updateByIdAtomic(noteId, data);
-        if (!updated) throw ApiError.NotFound("Note not found");
+        if (!updated) throw ApiError.NotFoundError("Note not found");
         return new NoteDto(updated, userId);
     }
 
     async softDelete(noteId, userId) {
         const note = await noteRepository.softDelete(noteId);
-        if (!note) throw ApiError.NotFound("Note not found");
+        if (!note) throw ApiError.NotFoundError("Note not found");
         return new NoteDto(note, userId);
     }
 
@@ -38,7 +38,7 @@ class NoteService {
 
     async restore(noteId, userId) {
         const note = await noteRepository.findById(noteId);
-        if (!note) throw ApiError.NotFound("Note not found");
+        if (!note) throw ApiError.NotFoundError("Note not found");
 
         if (note.ownerId !== userId) {
             throw ApiError.Forbidden("You cannot restore this note");
@@ -79,7 +79,7 @@ class NoteService {
 
     async getAllPublicNotes(userId = null) {
         const notes = await noteRepository.findBy({ isPublic: true });
-        return notes.map(note => new NoteDto(note, userId || note.ownerId));
+        return notes.map(note => new NoteDto(note, userId));
     }
 
     async getSharedWithUser(userId) {
@@ -94,7 +94,7 @@ class NoteService {
 
     async searchPublicNotes(query, userId = null) {
         const notes = await noteRepository.searchPublicNotes(query);
-        return notes.map(note => new NoteDto(note, userId || note.ownerId));
+        return notes.map(note => new NoteDto(note, userId));
     }
 
     async getNoteById(noteId) {
@@ -109,28 +109,64 @@ class NoteService {
             // Убеждаемся, что это Buffer
             const buffer = Buffer.isBuffer(state) ? state : Buffer.from(state);
             
-            // Извлекаем текст из ydocState для поиска
+            const Y = await import('yjs');
+            
+            // Проверяем размер состояния
+            const SIZE_THRESHOLD = 500 * 1024; // 500 KB - порог для создания snapshot
+            const shouldCreateSnapshot = buffer.length > SIZE_THRESHOLD;
+            
+            let finalState = buffer;
             let searchableContent = '';
+            let snapshotCreated = false;
+            
             try {
-                const Y = await import('yjs');
-                const doc = new Y.Doc();
-                Y.applyUpdate(doc, buffer);
-                const text = doc.getText('content');
+                // Декодируем текущее состояние
+                const currentDoc = new Y.Doc();
+                Y.applyUpdate(currentDoc, buffer);
+                const text = currentDoc.getText('content');
                 searchableContent = text.toString();
+                
                 // Ограничиваем длину для индекса (MongoDB text index имеет ограничения)
                 if (searchableContent.length > 10000) {
                     searchableContent = searchableContent.substring(0, 10000);
                 }
+                
+                // Если размер превышает порог, создаем snapshot (чистое состояние без истории)
+                if (shouldCreateSnapshot) {
+                    const originalSize = buffer.length;
+                    console.log(`[NoteService] ⚠ Размер состояния ${originalSize} байт (${(originalSize / 1024).toFixed(2)} KB) превышает порог ${SIZE_THRESHOLD} байт, создаем snapshot...`);
+                    
+                    // Создаем новый чистый документ с текущим содержимым
+                    // Это удаляет всю историю обновлений, оставляя только текущее состояние
+                    const snapshotDoc = new Y.Doc();
+                    const snapshotText = snapshotDoc.getText('content');
+                    snapshotText.insert(0, text.toString());
+                    
+                    // Кодируем snapshot (это будет чистое состояние без истории обновлений)
+                    finalState = Y.encodeStateAsUpdate(snapshotDoc);
+                    snapshotCreated = true;
+                    
+                    const newSize = finalState.length;
+                    const savings = originalSize - newSize;
+                    const savingsPercent = ((savings / originalSize) * 100).toFixed(1);
+                    
+                    console.log(`[NoteService] ✓ Snapshot создан: было ${originalSize} байт (${(originalSize / 1024).toFixed(2)} KB), стало ${newSize} байт (${(newSize / 1024).toFixed(2)} KB)`);
+                    console.log(`[NoteService] ✓ Экономия: ${savings} байт (${(savings / 1024).toFixed(2)} KB, ${savingsPercent}%)`);
+                }
             } catch (extractError) {
-                console.warn(`[NoteService] Не удалось извлечь текст из ydocState:`, extractError.message);
+                console.warn(`[NoteService] Не удалось обработать ydocState:`, extractError.message);
+                // Продолжаем с исходным состоянием
             }
+            
+            // Убеждаемся, что finalState - это Buffer
+            const finalBuffer = Buffer.isBuffer(finalState) ? finalState : Buffer.from(finalState);
             
             // Используем прямой вызов модели для гарантии сохранения Buffer и searchableContent
             const result = await NoteModel.findByIdAndUpdate(
                 noteId,
                 { 
                     $set: { 
-                        ydocState: buffer,
+                        ydocState: finalBuffer,
                         'meta.searchableContent': searchableContent
                     } 
                 },
@@ -142,7 +178,10 @@ class NoteService {
                 return;
             }
             
-            console.log(`[NoteService] ✓ YDocState сохранен в БД для заметки ${noteId}, размер: ${buffer.length} байт, текст: ${searchableContent.length} символов`);
+            const sizeInfo = snapshotCreated 
+                ? `snapshot: ${finalBuffer.length} байт (${(finalBuffer.length / 1024).toFixed(2)} KB)`
+                : `${finalBuffer.length} байт (${(finalBuffer.length / 1024).toFixed(2)} KB)`;
+            console.log(`[NoteService] ✓ YDocState сохранен в БД для заметки ${noteId}, ${sizeInfo}, текст: ${searchableContent.length} символов`);
         } catch (error) {
             console.error(`[NoteService] ✗ ОШИБКА при сохранении YDocState:`, error.message);
             // НЕ выбрасываем ошибку, чтобы не прерывать работу YJS

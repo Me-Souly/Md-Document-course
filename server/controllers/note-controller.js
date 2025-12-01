@@ -85,7 +85,8 @@ class NoteController {
     // GET /api/notes/public
     async getAllPublicNotes(req, res, next) {
         try {
-            const notes = await noteService.getAllPublicNotes();
+            const userId = req.user?.id || null;
+            const notes = await noteService.getAllPublicNotes(userId);
             return res.json(notes);
         } catch (e) {
             next(e);
@@ -119,7 +120,8 @@ class NoteController {
     async searchPublic(req, res, next) {
         try {
             const query = req.query.query || '';
-            const notes = await noteService.searchPublicNotes(query);
+            const userId = req.user?.id || null;
+            const notes = await noteService.searchPublicNotes(query, userId);
    
             return res.json({ success: true, notes });
         } catch (e) {
