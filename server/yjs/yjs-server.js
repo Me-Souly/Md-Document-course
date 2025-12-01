@@ -8,8 +8,48 @@ const require = createRequire(import.meta.url);
 const { setupWSConnection, getYDoc } = require("y-websocket/bin/utils");
 const syncProtocol = require("y-protocols/sync");
 const encoding = require("lib0/encoding");
+const decoding = require("lib0/decoding");
+
+const messageSync = 0;
+const messageAwareness = 1;
+const messageAuth = 2;
 
 const docStateMap = new WeakMap();
+
+const toUint8Array = (message) => {
+  if (message instanceof Uint8Array) return message;
+  if (Array.isArray(message)) return Uint8Array.from(message);
+  if (message instanceof ArrayBuffer) return new Uint8Array(message);
+  if (Buffer.isBuffer(message)) return new Uint8Array(message);
+  return null;
+};
+
+const shouldBlockUpdateFromReadOnly = (message) => {
+  try {
+    const uint8Message = toUint8Array(message);
+    if (!uint8Message || uint8Message.length === 0) {
+      return false;
+    }
+    const decoder = decoding.createDecoder(uint8Message);
+    const messageType = decoding.readVarUint(decoder);
+
+    if (messageType === messageSync) {
+      const syncMessageType = decoding.readVarUint(decoder);
+      return syncMessageType === syncProtocol.messageYjsUpdate;
+    }
+
+    // Разрешаем awareness/messages
+    if (messageType === messageAwareness || messageType === messageAuth) {
+      return false;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[YJS] Ошибка разбора сообщения read-only клиента:', error);
+    // На всякий случай блокируем, чтобы не допустить изменений
+    return true;
+  }
+};
 
 const getDocState = (docName, doc) => {
   let state = docStateMap.get(doc);
@@ -64,6 +104,7 @@ export const setupYjs = (server) => {
         ws.close(1008, "Access denied");
         return;
       }
+      const isReadOnly = permission !== 'edit';
 
       const docName = `yjs/${noteId}`;
       
@@ -287,7 +328,8 @@ export const setupYjs = (server) => {
       if (!docState.isUpdateHandlerAttached) {
         console.log(`[YJS] Регистрация обработчика update для документа ${docName}`);
         
-        // Debounce для сохранения - сохраняем не чаще чем раз в секунду
+        const SAVE_DEBOUNCE_MS = 2000;
+        // Debounce для сохранения - сохраняем не чаще чем раз в SAVE_DEBOUNCE_MS
         let saveTimeout = null;
         const debouncedSave = async () => {
           if (saveTimeout) {
@@ -295,7 +337,7 @@ export const setupYjs = (server) => {
           }
           saveTimeout = setTimeout(async () => {
             await saveDocState();
-          }, 1000); // Сохраняем через 1 секунду после последнего обновления
+          }, SAVE_DEBOUNCE_MS);
         };
         
         const saveDocState = async () => {
@@ -305,7 +347,10 @@ export const setupYjs = (server) => {
               return; // Не сохраняем пустое состояние
             }
             
+            // Кодируем текущее состояние (note-service.js создаст snapshot если нужно)
             const state = Y.encodeStateAsUpdate(sharedDoc);
+            
+            // Проверяем, что состояние корректно
             const testDoc = new Y.Doc();
             Y.applyUpdate(testDoc, state);
             const testText = testDoc.getText("content").toString();
@@ -315,8 +360,9 @@ export const setupYjs = (server) => {
               return;
             }
             
+            // note-service.js автоматически создаст snapshot если размер превышает порог
             await noteService.saveYDocState(noteId, state);
-            console.log(`[YJS] ✓ Сохранено в БД для заметки ${noteId}, текст: ${testText.length} символов`);
+            console.log(`[YJS] ✓ Сохранено в БД для заметки ${noteId}, размер: ${state.length} байт, текст: ${testText.length} символов`);
           } catch (err) {
             console.error(`[YJS] ✗ Ошибка сохранения в БД:`, err.message);
           }
@@ -465,7 +511,25 @@ export const setupYjs = (server) => {
         }
       }
       
-      console.log(`[YJS] Подключение клиента к документу ${docName}, текущее содержимое: ${finalContent.length} символов`);
+      console.log(`[YJS] Подключение клиента к документу ${docName}, текущее содержимое: ${finalContent.length} символов, readOnly=${isReadOnly}`);
+
+      if (isReadOnly) {
+        // Оборачиваем обработчики сообщений, чтобы блокировать попытки записи
+        const originalOn = ws.on.bind(ws);
+        ws.on = (event, listener) => {
+          if (event === 'message') {
+            const wrapped = (message, ...args) => {
+              if (shouldBlockUpdateFromReadOnly(message)) {
+                console.log('[YJS] Блокируем попытку записи от read-only клиента');
+                return;
+              }
+              listener(message, ...args);
+            };
+            return originalOn(event, wrapped);
+          }
+          return originalOn(event, listener);
+        };
+      }
       
       if (finalContent.length > 0) {
         console.log(`[YJS] Первые 100 символов для отправки клиенту: "${finalContent.substring(0, 100)}"`);
