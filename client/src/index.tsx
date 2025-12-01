@@ -1,17 +1,21 @@
 import React, { createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import Store from './store/store';
+import RootStore from './stores/RootStore';
+import './index.css';
 
-interface State {
-  store: Store,
+// Создаём единственный экземпляр RootStore
+const rootStore = new RootStore();
+
+// Типизируем контекст
+interface StoreContextType {
+  rootStore: RootStore;
 }
 
-const store = new Store();
-
-export const Context = createContext<State>({
-  store,
-})
+// Создаём контекст
+export const StoreContext = createContext<StoreContextType>({
+  rootStore,
+});
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -19,10 +23,11 @@ const root = ReactDOM.createRoot(
 
 root.render(
   <React.StrictMode>
-    <Context.Provider value={{
-      store
-      }}>
+    <StoreContext.Provider value={{ rootStore }}>
       <App />
-    </Context.Provider>
+    </StoreContext.Provider>
   </React.StrictMode>
 );
+
+// Экспортируем для удобства использования в компонентах
+export { rootStore };

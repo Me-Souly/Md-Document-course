@@ -6,7 +6,7 @@ import axios from "axios";
 import { AuthResponse } from "../models/response/AuthResponse";
 import { API_URL } from "../http";
 
-export default class Store {
+export default class authStore {
     user = {} as IUser;
     isAuth = false;
     isLoading = false;
@@ -107,9 +107,7 @@ export default class Store {
         try {
             await PasswordService.changePassword(oldPassword, newPassword);
         } catch (e) {
-            
+            console.log(e);
         }
-        console.log(oldPassword);
-        console.log(newPassword);
     }
 }
