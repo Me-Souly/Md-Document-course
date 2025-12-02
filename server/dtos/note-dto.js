@@ -7,7 +7,14 @@ class NoteDto {
     this.folderId = note.folderId;
     this.parentId = note.parentId;
     this.isPublic = note.isPublic;
-    this.meta = note.meta;
+    
+    // Prepare meta object with excerpt fallback
+    this.meta = { ...note.meta };
+    // If excerpt is empty but searchableContent exists, use it (trimmed to 200 chars)
+    if (!this.meta.excerpt && this.meta.searchableContent) {
+      this.meta.excerpt = this.meta.searchableContent.trim().slice(0, 200);
+    }
+    
     this.updatedAt = note.updatedAt;
     this.createdAt = note.createdAt;
 

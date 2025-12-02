@@ -29,14 +29,71 @@
 .homeControls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+}
+
+.viewModeToggle {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.viewModeButton {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.15s;
+}
+
+.viewModeButton:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.viewModeButton.active {
+  background: #1976d2;
+  color: #ffffff;
+}
+
+.viewModeButton.active:hover {
+  background: #1565c0;
+}
+
+.viewModeIcon {
+  width: 18px;
+  height: 18px;
 }
 
 .select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
   font-size: 14px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 140px;
+}
+
+.select:hover {
+  border-color: #1976d2;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
 }
 
 .section {
@@ -52,52 +109,14 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 .list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.noteCardGrid,
-.noteCardList {
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  padding: 12px 14px;
-  cursor: pointer;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-}
-
-.noteCardGrid:hover,
-.noteCardList:hover {
-  border-color: #1976d2;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
-}
-
-.noteTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.notePreview {
-  font-size: 13px;
-  color: #4b5563;
-  margin-bottom: 6px;
-}
-
-.noteMeta {
-  font-size: 11px;
-  color: #6b7280;
+  gap: 12px;
 }
 
 .loading,

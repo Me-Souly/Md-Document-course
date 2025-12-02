@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { NoteCard } from '../components/NoteCard';
 import $api from '../http';
 import styles from './HomePage.module.css';
+import { GridIcon, ListIcon } from '../components/icons';
 
 type ViewMode = 'grid' | 'list';
 type SortOption = 'date-edited' | 'date-created' | 'a-z' | 'z-a';
@@ -10,6 +11,8 @@ interface HomeNote {
   id: string;
   title: string;
   rendered?: string;
+  excerpt?: string;
+  searchableContent?: string;
   updatedAt: string;
   createdAt: string;
   isFavorite?: boolean;
@@ -17,7 +20,6 @@ interface HomeNote {
 }
 
 export const HomePage: React.FC = () => {
-  const navigate = useNavigate();
   const [notes, setNotes] = useState<HomeNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,15 +32,25 @@ export const HomePage: React.FC = () => {
         setLoading(true);
         const res = await $api.get('/notes');
         const data = Array.isArray(res.data) ? res.data : [];
-        const mapped: HomeNote[] = data.map((n: any) => ({
-          id: n.id,
-          title: n.title || 'Untitled',
-          rendered: n.rendered,
-          updatedAt: n.updatedAt,
-          createdAt: n.createdAt,
-          isFavorite: n.meta?.isFavorite ?? false,
-          isShared: n.isPublic ?? false,
-        }));
+        const mapped: HomeNote[] = data.map((n: any) => {
+          // Use excerpt if available, otherwise use searchableContent (trimmed to 200 chars)
+          let excerpt = n.meta?.excerpt;
+          if (!excerpt && n.meta?.searchableContent) {
+            excerpt = n.meta.searchableContent.trim().slice(0, 200);
+          }
+          
+          return {
+            id: n.id,
+            title: n.title || 'Untitled',
+            rendered: n.rendered,
+            excerpt: excerpt,
+            searchableContent: n.meta?.searchableContent,
+            updatedAt: n.updatedAt,
+            createdAt: n.createdAt,
+            isFavorite: n.meta?.isFavorite ?? false,
+            isShared: n.isPublic ?? false,
+          };
+        });
         setNotes(mapped);
         setError(null);
       } catch (e: any) {
@@ -79,8 +91,8 @@ export const HomePage: React.FC = () => {
   const favoriteNotes = sortedNotes.filter((n) => n.isFavorite);
   const sharedNotes = sortedNotes.filter((n) => n.isShared);
 
-  const handleOpenNote = (id: string) => {
-    navigate(`/note/${id}`);
+  const handleDeleteNote = (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
   };
 
   const renderSection = (title: string, items: HomeNote[]) => {
@@ -97,22 +109,12 @@ export const HomePage: React.FC = () => {
           }
         >
           {items.map((note) => (
-            <div
+            <NoteCard
               key={note.id}
-              className={viewMode === 'grid' ? styles.noteCardGrid : styles.noteCardList}
-              onClick={() => handleOpenNote(note.id)}
-            >
-              <h3 className={styles.noteTitle}>{note.title}</h3>
-              {note.rendered && (
-                <p className={styles.notePreview}>
-                  {note.rendered.slice(0, 120)}
-                  {note.rendered.length > 120 ? '…' : ''}
-                </p>
-              )}
-              <p className={styles.noteMeta}>
-                Updated {new Date(note.updatedAt).toLocaleString()}
-              </p>
-            </div>
+              note={note}
+              viewMode={viewMode}
+              onDelete={() => handleDeleteNote(note.id)}
+            />
           ))}
         </div>
       </section>
@@ -152,14 +154,22 @@ export const HomePage: React.FC = () => {
         <div className={styles.homeHeader}>
           <h1 className={styles.homeTitle}>Your Notes</h1>
           <div className={styles.homeControls}>
-            <select
-              className={styles.select}
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as ViewMode)}
-            >
-              <option value="grid">Grid</option>
-              <option value="list">List</option>
-            </select>
+            <div className={styles.viewModeToggle}>
+              <button
+                className={`${styles.viewModeButton} ${viewMode === 'grid' ? styles.active : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid view"
+              >
+                <GridIcon className={styles.viewModeIcon} />
+              </button>
+              <button
+                className={`${styles.viewModeButton} ${viewMode === 'list' ? styles.active : ''}`}
+                onClick={() => setViewMode('list')}
+                title="List view"
+              >
+                <ListIcon className={styles.viewModeIcon} />
+              </button>
+            </div>
             <select
               className={styles.select}
               value={sortBy}
