@@ -6,6 +6,7 @@ import { observer } from 'mobx-react-lite';
 import { IUser } from './models/IUser';
 import UserService from './service/UserService';
 import { NoteEditorPage } from './pages/NoteEditorPage';
+import { ProfilePage } from './pages/ProfilePage';
 import axios from 'axios';
 
 function App() {
@@ -47,11 +48,12 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
+        <Routes>
         <Route path="/" element={<NoteEditorPage />} />
         <Route path="/note/:noteId" element={<NoteEditorPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
     </BrowserRouter>
   );
 }
