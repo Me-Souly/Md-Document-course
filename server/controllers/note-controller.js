@@ -94,6 +94,17 @@ class NoteController {
         }
     }
 
+    // GET /api/notes/shared
+    async getSharedNotes(req, res, next) {
+        try {
+            const userId = req.user.id;
+            const notes = await noteService.getSharedWithUser(userId);
+            return res.json(notes);
+        } catch (e) {
+            next(e);
+        }
+    }
+
     // async getDeleted(req, res, next) {
     //     try {
     //         const userId = req.user.id;

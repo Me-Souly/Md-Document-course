@@ -22,6 +22,7 @@ interface HomeNote {
 
 export const HomePage: React.FC = () => {
   const [notes, setNotes] = useState<HomeNote[]>([]);
+  const [sharedNotes, setSharedNotes] = useState<HomeNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -31,10 +32,15 @@ export const HomePage: React.FC = () => {
     const loadNotes = async () => {
       try {
         setLoading(true);
-        const res = await $api.get('/notes');
-        const data = Array.isArray(res.data) ? res.data : [];
-        const mapped: HomeNote[] = data.map((n: any) => {
-          // Use excerpt if available, otherwise use searchableContent (trimmed to 200 chars)
+        const [ownNotesRes, sharedNotesRes] = await Promise.all([
+          $api.get('/notes'),
+          $api.get('/notes/shared').catch(() => ({ data: [] })), // Ignore errors for shared notes
+        ]);
+        
+        const ownData = Array.isArray(ownNotesRes.data) ? ownNotesRes.data : [];
+        const sharedData = Array.isArray(sharedNotesRes.data) ? sharedNotesRes.data : [];
+        
+        const mapNote = (n: any): HomeNote => {
           let excerpt = n.meta?.excerpt;
           if (!excerpt && n.meta?.searchableContent) {
             excerpt = n.meta.searchableContent.trim().slice(0, 200);
@@ -51,8 +57,10 @@ export const HomePage: React.FC = () => {
             isFavorite: n.meta?.isFavorite ?? false,
             isShared: n.isPublic ?? false,
           };
-        });
-        setNotes(mapped);
+        };
+        
+        setNotes(ownData.map(mapNote));
+        setSharedNotes(sharedData.map(mapNote));
         setError(null);
       } catch (e: any) {
         setError(e?.response?.data?.message || 'Failed to load notes');
@@ -90,7 +98,31 @@ export const HomePage: React.FC = () => {
 
   const recentNotes = sortedNotes.slice(0, 5);
   const favoriteNotes = sortedNotes.filter((n) => n.isFavorite);
-  const sharedNotes = sortedNotes.filter((n) => n.isShared);
+  
+  // Sort shared notes
+  const sortedSharedNotes = useMemo(() => {
+    const copy = [...sharedNotes];
+    copy.sort((a, b) => {
+      const aUpdated = new Date(a.updatedAt).getTime();
+      const bUpdated = new Date(b.updatedAt).getTime();
+      const aCreated = new Date(a.createdAt).getTime();
+      const bCreated = new Date(b.createdAt).getTime();
+
+      switch (sortBy) {
+        case 'date-edited':
+          return bUpdated - aUpdated;
+        case 'date-created':
+          return bCreated - aCreated;
+        case 'a-z':
+          return a.title.localeCompare(b.title);
+        case 'z-a':
+          return b.title.localeCompare(a.title);
+        default:
+          return 0;
+      }
+    });
+    return copy;
+  }, [sharedNotes, sortBy]);
 
   const handleDeleteNote = (noteId: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
@@ -186,7 +218,7 @@ export const HomePage: React.FC = () => {
 
         {renderSection('Recent Notes', recentNotes)}
         {renderSection('Starred', favoriteNotes)}
-        {renderSection('Shared with Me', sharedNotes)}
+        {renderSection('Shared with Me', sortedSharedNotes)}
         {renderSection('All Notes', sortedNotes)}
       </div>
     </div>

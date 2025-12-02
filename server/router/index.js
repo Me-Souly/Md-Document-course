@@ -98,6 +98,10 @@ router.get('/notes',
     authMiddleware, 
     checkUserActive, 
     noteController.getUserNotes);
+router.get('/notes/shared', 
+    authMiddleware, 
+    checkUserActive, 
+    noteController.getSharedNotes);
 router.get('/notes/:id', 
     authMiddleware, 
     checkUserActive, 

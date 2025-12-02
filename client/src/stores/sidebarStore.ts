@@ -33,6 +33,7 @@ class sidebarStore {
   // Состояние
   collapsed = false;
   fileTree: FileTreeNode[] = [];
+  sharedNotes: FileTreeNode[] = [];
   selectedNoteId: string | null = null;
   searchQuery = '';
   expandedFolders: Set<string> = new Set();
@@ -40,6 +41,7 @@ class sidebarStore {
   editingNodeId: string | null = null;
   editingMode: 'rename' | 'create-folder' | 'create-note' | 'create-subnote' | null = null;
   creatingParentId: string | null = null;
+  showSharedNotes = false;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -346,9 +348,14 @@ class sidebarStore {
   }
 
   // Фильтрация дерева по поисковому запросу
+  toggleSharedNotes() {
+    this.showSharedNotes = !this.showSharedNotes;
+  }
+
   getFilteredTree(): FileTreeNode[] {
+    const tree = this.showSharedNotes ? this.sharedNotes : this.fileTree;
     if (!this.searchQuery.trim()) {
-      return this.fileTree;
+      return tree;
     }
 
     const query = this.searchQuery.toLowerCase();
