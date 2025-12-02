@@ -11,6 +11,8 @@ class NoteAccessController {
             const { userId, permission } = req.body;
             const grantedBy = req.user.id;
 
+            console.log(userId, permission);
+
             if (!userId || !permission) {
                 return res.status(400).json({ 
                     message: 'userId and permission are required' 

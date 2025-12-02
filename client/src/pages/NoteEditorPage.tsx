@@ -4,6 +4,7 @@ import { NoteViewer } from '../components/NoteViewer';
 import { FileSidebar } from '../components/FileSidebar';
 import { TopBar } from '../components/TopBar';
 import { HomePage } from './HomePage';
+import { ShareModal } from '../components/ShareModal';
 import { useAuthStore, useSidebarStore } from '../hooks/useStores';
 import $api from '../http';
 import styles from './NoteEditorPage.module.css';
@@ -29,6 +30,7 @@ export const NoteEditorPage: React.FC = () => {
   const [note, setNote] = useState<NoteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -149,8 +151,9 @@ export const NoteEditorPage: React.FC = () => {
         noteTitle={noteId && note ? note.title : undefined}
         breadcrumbs={noteId && note ? ['Home', note.title || 'Untitled Note'] : ['Home']}
         onShareClick={() => {
-          // TODO: Реализовать функционал шаринга
-          console.log('Share clicked');
+          if (noteId && note) {
+            setShareModalOpen(true);
+          }
         }}
         collaborators={
           noteId && note
@@ -162,6 +165,15 @@ export const NoteEditorPage: React.FC = () => {
             : []
         }
       />
+
+      {noteId && note && (
+        <ShareModal
+          open={shareModalOpen}
+          onOpenChange={setShareModalOpen}
+          noteId={noteId}
+          noteTitle={note.title || 'Untitled Note'}
+        />
+      )}
 
       <div className={styles.body}>
         <FileSidebar currentNoteId={noteId && note ? noteId : undefined} />
