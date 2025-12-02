@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { NoteViewer } from '../components/NoteViewer';
 import { FileSidebar } from '../components/FileSidebar';
 import { TopBar } from '../components/TopBar';
+import { HomePage } from './HomePage';
 import { useAuthStore, useSidebarStore } from '../hooks/useStores';
 import $api from '../http';
 import styles from './NoteEditorPage.module.css';
@@ -30,15 +31,17 @@ export const NoteEditorPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!noteId) {
-      setError('Note ID is required');
-      setLoading(false);
-      return;
-    }
-
     const token = localStorage.getItem('token');
     if (!token) {
       navigate('/login');
+      return;
+    }
+
+    if (!noteId) {
+      // Режим домашнего экрана: заметка не выбрана
+      setNote(null);
+      setError(null);
+      setLoading(false);
       return;
     }
 
@@ -114,7 +117,7 @@ export const NoteEditorPage: React.FC = () => {
 
   const token = localStorage.getItem('token');
 
-  if (loading) {
+  if (noteId && loading) {
     return (
       <div className={styles.loading}>
         <p>Загрузка заметки...</p>
@@ -122,8 +125,8 @@ export const NoteEditorPage: React.FC = () => {
     );
   }
 
-  // Проверка доступа - если нет permission, не показываем заметку
-  if (!note || !note.permission) {
+  // Проверка доступа - если нет permission, не показываем заметку (но только если заметка успешно загружена)
+  if (noteId && note && !note.permission) {
     return (
       <div className={styles.errorContainer}>
         <h2 className={styles.errorTitle}>Доступ запрещен</h2>
@@ -140,47 +143,41 @@ export const NoteEditorPage: React.FC = () => {
     );
   }
 
-  if (error || !token) {
-    return (
-      <div className={styles.simpleError}>
-        <h2>Ошибка</h2>
-        <p>{error || 'Note not found'}</p>
-        <button onClick={() => navigate(-1)} className={styles.backButton}>
-          Назад
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className={styles.pageContainer}>
-      {/* Sidebar */}
-      <FileSidebar currentNoteId={noteId || undefined} />
+      <TopBar
+        noteTitle={noteId && note ? note.title : undefined}
+        breadcrumbs={noteId && note ? ['Home', note.title || 'Untitled Note'] : ['Home']}
+        onShareClick={() => {
+          // TODO: Реализовать функционал шаринга
+          console.log('Share clicked');
+        }}
+        collaborators={
+          noteId && note
+            ? note.access?.map(access => ({
+                id: access.userId,
+                name: `User ${access.userId}`,
+                initials: 'U',
+              })) || []
+            : []
+        }
+      />
 
-      {/* Основной контент */}
-      <div className={styles.container}>
-        {/* TopBar */}
-        <TopBar
-          noteTitle={note.title}
-          breadcrumbs={['Getting Started', note.title || 'Untitled Note']}
-          onShareClick={() => {
-            // TODO: Реализовать функционал шаринга
-            console.log('Share clicked');
-          }}
-          collaborators={note.access?.map(access => ({
-            id: access.userId,
-            name: `User ${access.userId}`,
-            initials: 'U'
-          })) || []}
-        />
+      <div className={styles.body}>
+        <FileSidebar currentNoteId={noteId && note ? noteId : undefined} />
 
-        {/* Редактор/Просмотр в зависимости от прав доступа */}
-        <div className={styles.editorContainer}>
-          <NoteViewer
-            noteId={noteId!}
-            permission={note.permission}
-            getToken={() => localStorage.getItem('token')}
-          />
+        <div className={styles.container}>
+          <div className={styles.editorContainer}>
+            {noteId && note ? (
+              <NoteViewer
+                noteId={noteId}
+                permission={note.permission as 'edit' | 'read'}
+                getToken={() => localStorage.getItem('token')}
+              />
+            ) : (
+              <HomePage />
+            )}
+          </div>
         </div>
       </div>
     </div>

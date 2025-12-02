@@ -135,29 +135,39 @@ export const TopBar: React.FC<TopBarProps> = observer(({
     navigate('/');
   };
 
-  // Формируем breadcrumbs
-  const displayBreadcrumbs = breadcrumbs.length > 0 
-    ? breadcrumbs 
-    : ['Getting Started', noteTitle];
-
   return (
     <header className={styles.topBar}>
-      {/* Left: Breadcrumbs */}
-      <div className={styles.breadcrumbs}>
-        {displayBreadcrumbs.map((crumb, index) => (
-          <React.Fragment key={index}>
-            {index > 0 && <span className={styles.breadcrumbSeparator}>/</span>}
-            <span className={cn(
-              styles.breadcrumbItem,
-              index === displayBreadcrumbs.length - 1 && styles.breadcrumbItemActive
-            )}>
-              {crumb}
+      {/* Left: Home + Current note */}
+      <div className={styles.left}>
+        <button
+          className={cn(styles.button, styles.buttonGhost, styles.homeButton)}
+          onClick={() => navigate('/')}
+        >
+          <span className={styles.homeIcon}>🏠</span>
+          <span className={styles.homeText}>Home</span>
+        </button>
+        {noteTitle && (
+          <>
+            <span className={styles.breadcrumbSeparator}>/</span>
+            <span className={cn(styles.breadcrumbItem, styles.breadcrumbItemActive)}>
+              {noteTitle}
             </span>
-          </React.Fragment>
-        ))}
+          </>
+        )}
       </div>
 
-      {/* Right: Actions */}
+      {/* Center: Search */}
+      <div className={styles.searchContainer}>
+        <div className={styles.searchWrapper}>
+          <SearchIcon className={styles.searchIconInput} />
+          <input
+            type="text"
+            placeholder="Search notes..."
+            className={styles.searchInputTop}
+          />
+        </div>
+      </div>
+
       <div className={styles.actions}>
         {/* Sync Status */}
         <div className={styles.syncStatus}>
