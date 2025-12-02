@@ -41,6 +41,12 @@ export const FileTree: React.FC<FileTreeProps> = observer(({ currentNoteId, onSe
     }
   };
 
+  // Check if we're creating a node in root
+  const isCreatingInRoot = 
+    sidebarStore.creatingParentId === null &&
+    sidebarStore.editingNodeId !== null &&
+    sidebarStore.editingNodeId.startsWith('temp-');
+
   return (
     <div className={styles.fileTree}>
       <div
@@ -58,6 +64,21 @@ export const FileTree: React.FC<FileTreeProps> = observer(({ currentNoteId, onSe
             onSelectNote={onSelectNote}
           />
         ))}
+        {isCreatingInRoot && sidebarStore.editingNodeId && (
+          <TreeNode
+            key={sidebarStore.editingNodeId}
+            node={{
+              id: sidebarStore.editingNodeId,
+              name: '',
+              type: sidebarStore.editingMode === 'create-folder' ? 'folder' : 'file',
+              parentId: undefined,
+            }}
+            level={0}
+            collapsed={sidebarStore.collapsed}
+            currentNoteId={currentNoteId}
+            onSelectNote={onSelectNote}
+          />
+        )}
       </div>
     </div>
   );

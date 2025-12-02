@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NoteCard } from '../components/NoteCard';
+import { CustomSelect } from '../components/CustomSelect';
 import $api from '../http';
 import styles from './HomePage.module.css';
 import { GridIcon, ListIcon } from '../components/icons';
@@ -170,16 +171,16 @@ export const HomePage: React.FC = () => {
                 <ListIcon className={styles.viewModeIcon} />
               </button>
             </div>
-            <select
-              className={styles.select}
+            <CustomSelect
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-            >
-              <option value="date-edited">Date Edited</option>
-              <option value="date-created">Date Created</option>
-              <option value="a-z">A–Z</option>
-              <option value="z-a">Z–A</option>
-            </select>
+              options={[
+                { value: 'date-edited', label: 'Date Edited' },
+                { value: 'date-created', label: 'Date Created' },
+                { value: 'a-z', label: 'A–Z' },
+                { value: 'z-a', label: 'Z–A' },
+              ]}
+              onChange={(value) => setSortBy(value as SortOption)}
+            />
           </div>
         </div>
 

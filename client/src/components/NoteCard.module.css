@@ -7,18 +7,27 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  z-index: 1;
 }
 
 .noteCard:hover {
   border-color: #1976d2;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
+  z-index: 2;
+}
+
+.noteCardMenuOpen {
+  z-index: 100 !important;
+}
+
+.noteCardMenuOpen:hover {
+  z-index: 100 !important;
 }
 
 .noteCardGrid {
-  min-height: 240px;
+  min-height: 100px;
   padding: 20px;
-  aspect-ratio: 1;
 }
 
 .noteCardList {
@@ -73,6 +82,7 @@
   position: relative;
   flex-shrink: 0;
   align-self: flex-start;
+  z-index: 10;
 }
 
 .menuButton {
@@ -109,7 +119,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 100;
+  z-index: 10000;
   min-width: 160px;
   overflow: hidden;
 }
@@ -201,5 +211,14 @@
 .badge {
   font-size: 14px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sharedIcon {
+  width: 14px;
+  height: 14px;
+  color: #1976d2;
 }
 

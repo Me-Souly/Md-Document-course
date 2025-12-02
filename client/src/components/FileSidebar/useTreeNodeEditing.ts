@@ -93,7 +93,7 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
     
     if (editingMode === 'create-folder') {
       $api
-        .post('/folders', { title, parentId: creatingParentId })
+        .post('/folders', { title, parentId: creatingParentId || null })
         .then((res) => {
           sidebarStore.addNodeFromServer({
             id: res.data.id,
@@ -113,14 +113,20 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
           // Error toast is handled by axios interceptor
         });
     } else if (editingMode === 'create-note') {
+      // For root level notes, don't send folderId or parentId
+      const payload = creatingParentId 
+        ? { title, folderId: creatingParentId }
+        : { title, folderId: null, parentId: null };
+      
       $api
-        .post('/notes', { title, folderId: creatingParentId })
+        .post('/notes', payload)
         .then((res) => {
           sidebarStore.addNodeFromServer({
             id: res.data.id,
             title: res.data.title,
             type: 'file',
             folderId: res.data.folderId,
+            parentId: res.data.parentId,
           });
           if (creatingParentId) {
             sidebarStore.expandedFolders.add(creatingParentId);
@@ -129,7 +135,7 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
           toastManager.success('Заметка создана');
         })
         .catch((err) => {
-          console.error('Failed to create note in folder:', err);
+          console.error('Failed to create note:', err);
           sidebarStore.stopEditing();
           // Error toast is handled by axios interceptor
         });

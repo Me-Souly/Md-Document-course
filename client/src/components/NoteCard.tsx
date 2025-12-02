@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVerticalIcon } from './icons';
+import { MoreVerticalIcon, UsersIcon } from './icons';
 import { useSidebarStore } from '../hooks/useStores';
 import { useToastContext } from '../contexts/ToastContext';
 import { useModal } from '../hooks/useModal';
@@ -121,7 +121,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
     return (
       <>
         <div
-          className={cn(styles.noteCard, styles.noteCardList)}
+          className={cn(
+            styles.noteCard,
+            styles.noteCardList,
+            showMenu && styles.noteCardMenuOpen
+          )}
           onClick={handleCardClick}
         >
           <div className={styles.noteCardContent}>
@@ -172,7 +176,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
               {(note.isFavorite || note.isShared) && (
                 <div className={styles.noteBadges}>
                   {note.isFavorite && <span className={styles.badge}>⭐</span>}
-                  {note.isShared && <span className={styles.badge}>🔗</span>}
+                  {note.isShared && (
+                    <span className={styles.badge} title="Shared">
+                      <UsersIcon className={styles.sharedIcon} />
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -197,7 +205,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
   return (
     <>
       <div
-        className={cn(styles.noteCard, styles.noteCardGrid)}
+        className={cn(
+          styles.noteCard,
+          styles.noteCardGrid,
+          showMenu && styles.noteCardMenuOpen
+        )}
         onClick={handleCardClick}
       >
         <div className={styles.noteCardHeader}>
@@ -248,7 +260,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
           {(note.isFavorite || note.isShared) && (
             <div className={styles.noteBadges}>
               {note.isFavorite && <span className={styles.badge}>⭐</span>}
-              {note.isShared && <span className={styles.badge}>🔗</span>}
+              {note.isShared && (
+                <span className={styles.badge} title="Shared">
+                  <UsersIcon className={styles.sharedIcon} />
+                </span>
+              )}
             </div>
           )}
         </div>
