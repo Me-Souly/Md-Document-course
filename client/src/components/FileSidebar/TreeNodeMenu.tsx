@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FileTreeNode } from '../../types/notes';
 import { MoreVerticalIcon } from '../icons';
 import { useSidebarStore } from '../../hooks/useStores';
+import { useToastContext } from '../../contexts/ToastContext';
+import { useModal } from '../../hooks/useModal';
+import { Modal } from '../Modal';
 import $api from '../../http';
 import styles from '../FileSidebar.module.css';
 
@@ -17,6 +20,8 @@ interface TreeNodeMenuProps {
 
 export const TreeNodeMenu: React.FC<TreeNodeMenuProps> = ({ node, isOpen, onToggle, onClose, onDelete }) => {
   const sidebarStore = useSidebarStore();
+  const toast = useToastContext();
+  const { modalState, showModal, closeModal } = useModal();
   const isFolder = node.type === 'folder';
 
   const handleRename = (e: React.MouseEvent) => {
@@ -43,73 +48,95 @@ export const TreeNodeMenu: React.FC<TreeNodeMenuProps> = ({ node, isOpen, onTogg
     sidebarStore.startEditing(`temp-subnote-${Date.now()}`, 'create-subnote', node.id);
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
 
-    if (!window.confirm(`Are you sure you want to delete "${node.name}"?`)) {
-      return;
-    }
+    showModal(
+      `Удалить ${isFolder ? 'папку' : 'заметку'}`,
+      `Вы уверены, что хотите удалить "${node.name}"? Это действие нельзя отменить.`,
+      async () => {
+        try {
+          if (isFolder) {
+            await $api.delete(`/folders/${node.id}`);
+          } else {
+            await $api.delete(`/notes/${node.id}`);
+          }
 
-    try {
-      if (isFolder) {
-        await $api.delete(`/folders/${node.id}`);
-      } else {
-        await $api.delete(`/notes/${node.id}`);
+          sidebarStore.deleteNode(node.id);
+          toast.success(`${isFolder ? 'Папка' : 'Заметка'} удалена`);
+          
+          if (onDelete) {
+            onDelete();
+          }
+        } catch (err: any) {
+          console.error(`Failed to delete ${isFolder ? 'folder' : 'note'}:`, err);
+          // Error toast is handled by axios interceptor
+        }
+      },
+      {
+        confirmText: 'Удалить',
+        cancelText: 'Отмена',
+        variant: 'danger',
       }
-
-      sidebarStore.deleteNode(node.id);
-      
-      if (onDelete) {
-        onDelete();
-      }
-    } catch (err) {
-      console.error(`Failed to delete ${isFolder ? 'folder' : 'note'}:`, err);
-      alert(`Failed to delete ${isFolder ? 'folder' : 'note'}. Please try again.`);
-    }
+    );
   };
 
   return (
-    <div className={styles.dropdown}>
-      <button
-        className={styles.dropdownTrigger}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-      >
-        <MoreVerticalIcon className={styles.iconSmall} />
-      </button>
-      {isOpen && (
-        <div className={styles.dropdownMenu}>
-          <button className={styles.dropdownItem} onClick={handleRename}>
-            Rename
-          </button>
-
-          {isFolder ? (
-            <>
-              <button className={styles.dropdownItem} onClick={handleCreateFolder}>
-                Create folder
-              </button>
-              <button className={styles.dropdownItem} onClick={handleCreateNote}>
-                Create note
-              </button>
-            </>
-          ) : (
-            <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
-              Create subnote
+    <>
+      <div className={styles.dropdown}>
+        <button
+          className={styles.dropdownTrigger}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+        >
+          <MoreVerticalIcon className={styles.iconSmall} />
+        </button>
+        {isOpen && (
+          <div className={styles.dropdownMenu}>
+            <button className={styles.dropdownItem} onClick={handleRename}>
+              Rename
             </button>
-          )}
 
-          <button
-            className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
-            onClick={handleDelete}
-          >
-            Delete
-          </button>
-        </div>
+            {isFolder ? (
+              <>
+                <button className={styles.dropdownItem} onClick={handleCreateFolder}>
+                  Create folder
+                </button>
+                <button className={styles.dropdownItem} onClick={handleCreateNote}>
+                  Create note
+                </button>
+              </>
+            ) : (
+              <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
+                Create subnote
+              </button>
+            )}
+
+            <button
+              className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
+              onClick={handleDelete}
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
+      {modalState && (
+        <Modal
+          isOpen={modalState.isOpen}
+          onClose={closeModal}
+          title={modalState.title}
+          message={modalState.message}
+          confirmText={modalState.confirmText}
+          cancelText={modalState.cancelText}
+          onConfirm={modalState.onConfirm}
+          variant={modalState.variant}
+        />
       )}
-    </div>
+    </>
   );
 };
 

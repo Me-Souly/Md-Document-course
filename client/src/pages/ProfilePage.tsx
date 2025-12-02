@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useStores';
+import { useToastContext } from '../contexts/ToastContext';
 import styles from './ProfilePage.module.css';
 import $api from '../http';
 
@@ -20,6 +21,7 @@ const normalizeRole = (raw: unknown): string => {
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const authStore = useAuthStore();
+  const toast = useToastContext();
 
   const [activeTab, setActiveTab] = useState<TabKey>('profile');
 
@@ -97,30 +99,33 @@ export const ProfilePage: React.FC = () => {
       };
       const res = await $api.patch('/users/me', payload);
       authStore.setUser(res.data);
-      alert('Профиль обновлён');
+      toast.success('Профиль обновлён');
     } catch (e: any) {
       console.error('Failed to update profile:', e);
       const errorMsg = e?.response?.data?.message || 'Не удалось обновить профиль';
-      alert(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
   const handleChangePassword = async () => {
     if (!passwords.current || !passwords.next || !passwords.confirm) {
-      alert('Заполните все поля пароля');
+      toast.warning('Заполните все поля пароля');
       return;
     }
     if (passwords.next !== passwords.confirm) {
-      alert('Пароли не совпадают');
+      toast.warning('Пароли не совпадают');
       return;
     }
     try {
       await authStore.changePassword(passwords.current, passwords.next);
-      alert('Пароль обновлён (если сервер не ругнулся)');
+      toast.success('Пароль обновлён');
       setPasswords({ current: '', next: '', confirm: '' });
-    } catch (e) {
-      console.error(e);
-      alert('Не удалось сменить пароль');
+    } catch (e: any) {
+      console.error('Password change error:', e);
+      console.error('Error response:', e?.response);
+      console.error('Error response data:', e?.response?.data);
+      // Interceptor already shows toast for errors, so we don't need to show it again
+      // But we can log it for debugging
     }
   };
 

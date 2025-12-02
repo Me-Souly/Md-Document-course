@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSidebarStore } from '../../hooks/useStores';
 import { FileTreeNode } from '../../types/notes';
+import { toastManager } from '../../utils/toastManager';
 import $api from '../../http';
 
 export const useTreeNodeEditing = (node: FileTreeNode) => {
@@ -43,10 +44,12 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
             const name = res.data.name || res.data.title || trimmed;
             sidebarStore.updateNode(node.id, { name });
             sidebarStore.stopEditing();
+            toastManager.success(`${node.type === 'folder' ? 'Папка' : 'Заметка'} переименована`);
           })
           .catch((err) => {
             console.error(`Failed to rename ${node.type}:`, err);
             sidebarStore.stopEditing();
+            // Error toast is handled by axios interceptor
           });
       } else {
         handleCreate(trimmed);
@@ -68,8 +71,12 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
           .then((res) => {
             const name = res.data.name || res.data.title || trimmed;
             sidebarStore.updateNode(node.id, { name });
+            toastManager.success(`${node.type === 'folder' ? 'Папка' : 'Заметка'} переименована`);
           })
-          .catch((err) => console.error(`Failed to rename ${node.type}:`, err));
+          .catch((err) => {
+            console.error(`Failed to rename ${node.type}:`, err);
+            // Error toast is handled by axios interceptor
+          });
       }
       sidebarStore.stopEditing();
     } else {
@@ -98,10 +105,12 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
             sidebarStore.expandedFolders.add(creatingParentId);
           }
           sidebarStore.stopEditing();
+          toastManager.success('Папка создана');
         })
         .catch((err) => {
           console.error('Failed to create folder:', err);
           sidebarStore.stopEditing();
+          // Error toast is handled by axios interceptor
         });
     } else if (editingMode === 'create-note') {
       $api
@@ -117,10 +126,12 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
             sidebarStore.expandedFolders.add(creatingParentId);
           }
           sidebarStore.stopEditing();
+          toastManager.success('Заметка создана');
         })
         .catch((err) => {
           console.error('Failed to create note in folder:', err);
           sidebarStore.stopEditing();
+          // Error toast is handled by axios interceptor
         });
     } else if (editingMode === 'create-subnote') {
       $api
@@ -136,10 +147,12 @@ export const useTreeNodeEditing = (node: FileTreeNode) => {
             sidebarStore.expandedFolders.add(creatingParentId);
           }
           sidebarStore.stopEditing();
+          toastManager.success('Подзаметка создана');
         })
         .catch((err) => {
           console.error('Failed to create sub-note:', err);
           sidebarStore.stopEditing();
+          // Error toast is handled by axios interceptor
         });
     }
   };

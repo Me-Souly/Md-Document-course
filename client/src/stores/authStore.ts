@@ -104,10 +104,6 @@ export default class authStore {
     }
 
     async changePassword(oldPassword: string, newPassword: string) {
-        try {
-            await PasswordService.changePassword(oldPassword, newPassword);
-        } catch (e) {
-            console.log(e);
-        }
+        await PasswordService.changePassword(oldPassword, newPassword);
     }
 }
