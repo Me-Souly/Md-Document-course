@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVerticalIcon, UsersIcon } from './icons';
+import { MoreVerticalIcon, UsersIcon, GlobeIcon } from './icons';
 import { useSidebarStore } from '../hooks/useStores';
 import { useToastContext } from '../contexts/ToastContext';
 import { useModal } from '../hooks/useModal';
@@ -33,6 +33,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
   const { modalState, showModal, closeModal } = useModal();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isPublic, setIsPublic] = useState<boolean>(!!note.isShared);
+
+  useEffect(() => {
+    setIsPublic(!!note.isShared);
+  }, [note.isShared]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -71,6 +76,22 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
     setTimeout(() => {
       sidebarStore.startEditing(`temp-subnote-${Date.now()}`, 'create-subnote', note.id);
     }, 100);
+  };
+
+  const handleTogglePublic = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+
+    const makePublic = !isPublic;
+
+    try {
+      await $api.put(`/notes/${note.id}`, { isPublic: makePublic });
+      setIsPublic(makePublic);
+      toast.success(makePublic ? 'Note is now public' : 'Note is now private');
+    } catch (err: any) {
+      console.error('Failed to toggle public state:', err);
+      // Детальная ошибка уйдет в общий axios‑toast
+    }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -143,6 +164,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
                 </button>
                 {showMenu && (
                   <div className={styles.dropdownMenu}>
+                    <button className={styles.dropdownItem} onClick={handleTogglePublic}>
+                      {isPublic ? 'Make private' : 'Make public'}
+                    </button>
                     <button className={styles.dropdownItem} onClick={handleRename}>
                       Rename
                     </button>
@@ -173,12 +197,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
                   month: 'short',
                 })}
               </p>
-              {(note.isFavorite || note.isShared) && (
+              {(note.isFavorite || isPublic) && (
                 <div className={styles.noteBadges}>
                   {note.isFavorite && <span className={styles.badge}>⭐</span>}
-                  {note.isShared && (
-                    <span className={styles.badge} title="Shared">
-                      <UsersIcon className={styles.sharedIcon} />
+                  {isPublic && (
+                    <span className={styles.badge} title="Public">
+                      <GlobeIcon className={styles.sharedIcon} />
                     </span>
                   )}
                 </div>
@@ -226,6 +250,9 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
             </button>
             {showMenu && (
               <div className={styles.dropdownMenu}>
+                <button className={styles.dropdownItem} onClick={handleTogglePublic}>
+                  {isPublic ? 'Make private' : 'Make public'}
+                </button>
                 <button className={styles.dropdownItem} onClick={handleRename}>
                   Rename
                 </button>
@@ -257,12 +284,12 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
               year: 'numeric',
             })}
           </p>
-          {(note.isFavorite || note.isShared) && (
+          {(note.isFavorite || isPublic) && (
             <div className={styles.noteBadges}>
               {note.isFavorite && <span className={styles.badge}>⭐</span>}
-              {note.isShared && (
-                <span className={styles.badge} title="Shared">
-                  <UsersIcon className={styles.sharedIcon} />
+              {isPublic && (
+                <span className={styles.badge} title="Public">
+                  <GlobeIcon className={styles.sharedIcon} />
                 </span>
               )}
             </div>
