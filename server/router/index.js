@@ -17,6 +17,7 @@ import {
     noteAccessController,
     commentController
 } from '../controllers/index.js';
+import { getNotePresence } from '../yjs/yjs-server.js';
 
 const router = Router();
 
@@ -127,6 +128,16 @@ router.get('/folders/:id/notes',
     authMiddleware, 
     checkUserActive, 
     noteController.getNotesInFolder);
+
+// Presence по заметкам (кто сейчас подключен по WS к документу)
+router.get('/notes/:id/presence',
+    authMiddleware,
+    checkUserActive,
+    (req, res) => {
+        const noteId = req.params.id;
+        const userIds = getNotePresence(noteId);
+        return res.json({ userIds });
+    });
 
 router.get('/notes/public', noteController.getAllPublicNotes);
 

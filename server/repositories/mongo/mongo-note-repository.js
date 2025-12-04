@@ -110,17 +110,31 @@ class MongoNoteRepository extends NoteRepository {
             return await NoteModel.find(baseFilter).lean();
         }
 
+        const textQuery = query.trim();
+
         try {
-            return await NoteModel.find({
+            // Сначала пробуем текстовый поиск по индексу (title + meta.searchableContent)
+            const textResults = await NoteModel.find({
                 ...baseFilter,
-                $text: { $search: query.trim() }
+                $text: { $search: textQuery }
             }, {
                 score: { $meta: 'textScore' }
             })
             .sort({ score: { $meta: 'textScore' } })
             .lean();
+
+            // Если текстовый поиск ничего не нашёл, делаем fallback на обычный regex-поиск
+            if (textResults.length > 0) {
+                return textResults;
+            }
+
+            const regex = new RegExp(textQuery, 'i');
+            return await NoteModel.find({
+                ...baseFilter,
+                $or: [{ title: regex }, { 'meta.searchableContent': regex }]
+            }).lean();
         } catch (e) {
-            const regex = new RegExp(query, 'i');
+            const regex = new RegExp(textQuery, 'i');
             return await NoteModel.find({
                 ...baseFilter,
                 $or: [{ title: regex }, { 'meta.searchableContent': regex }]

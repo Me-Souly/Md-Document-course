@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { NoteViewer } from '../components/NoteViewer';
 import { FileSidebar } from '../components/FileSidebar';
@@ -31,6 +31,8 @@ export const NoteEditorPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
+  const lastPresenceKeyRef = useRef<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -117,6 +119,44 @@ export const NoteEditorPage: React.FC = () => {
     };
   }, [noteId, sidebarStore]);
 
+  // Presence: периодически спрашиваем сервер, какие userId сейчас в WS по этой заметке
+  useEffect(() => {
+    if (!noteId) {
+      setOnlineUserIds([]);
+      lastPresenceKeyRef.current = '';
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchPresence = async () => {
+      try {
+        const res = await $api.get(`/notes/${noteId}/presence`);
+        const ids: string[] = Array.isArray(res.data?.userIds) ? res.data.userIds : [];
+        if (!cancelled) {
+          // Сериализуем и сравниваем, чтобы не дергать ре-рендеры без изменений
+          const key = ids.slice().sort().join(',');
+          if (key !== lastPresenceKeyRef.current) {
+            lastPresenceKeyRef.current = key;
+            setOnlineUserIds(ids);
+          }
+        }
+      } catch (e) {
+        // тихо игнорируем, presence не критичен
+      }
+    };
+
+    // первый запрос сразу
+    fetchPresence();
+    // и дальше — раз в 5 секунд
+    const interval = setInterval(fetchPresence, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [noteId]);
+
   const token = localStorage.getItem('token');
 
   if (noteId && loading) {
@@ -161,6 +201,7 @@ export const NoteEditorPage: React.FC = () => {
                 id: access.userId,
                 name: `User ${access.userId}`,
                 initials: 'U',
+                isOnline: onlineUserIds.includes(access.userId),
               })) || []
             : []
         }

@@ -42,13 +42,188 @@
 
 .searchContainer {
   flex: 1;
-  max-width: 420px;
+  max-width: 800px;
 }
 
 .searchWrapper {
   position: relative;
   display: flex;
   align-items: center;
+}
+
+.searchResults {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0 0;
+}
+
+.searchResultItem {
+  width: 100%;
+  padding: 8px 16px;
+  margin: 2px 0;
+  background: #fafafa;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 10px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.searchResultItem:hover {
+  background: #f0f4ff;
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.18);
+}
+
+.searchResultItemFocused {
+  background: #e5efff;
+  box-shadow: 0 2px 6px rgba(25, 118, 210, 0.32);
+}
+
+.searchResultTitle {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.searchResultExcerpt {
+  font-size: 11px;
+  color: #9e9e9e;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.searchResultMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.searchResultStar {
+  font-size: 14px;
+  color: #ffb300;
+  margin-left: 8px;
+}
+
+.searchSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #f5f5f7;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.searchSectionTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #757575;
+}
+
+.searchSectionCount {
+  font-size: 11px;
+  color: #9e9e9e;
+}
+
+.searchSectionBody {
+  padding: 4px 0 6px;
+}
+
+.searchSectionDivider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 2px 0;
+}
+
+.searchFooter {
+  padding: 6px 8px 8px;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.searchFooterText {
+  font-size: 11px;
+  color: #9e9e9e;
+  text-align: center;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 1px 4px;
+  margin: 0 1px;
+  border-radius: 4px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 10px;
+}
+
+.searchEmpty {
+  padding: 16px 12px 18px;
+  text-align: center;
+  color: #9e9e9e;
+}
+
+.searchEmptyIcon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 4px;
+  color: #c0c0c0;
+}
+
+.searchEmptyText {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.searchEmptySubtext {
+  font-size: 11px;
+  color: #b0b0b0;
+}
+
+.searchHighlight {
+  background: rgba(25, 118, 210, 0.14);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.searchClearButton {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: #999;
+}
+
+.searchClearButton:hover {
+  color: #666;
 }
 
 .searchIconInput {
@@ -202,9 +377,16 @@
 }
 
 /* Avatar */
-.avatar {
+.avatarWrapper {
+  position: relative;
   width: 28px;
   height: 28px;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -212,11 +394,29 @@
   overflow: hidden;
   background: #e0e0e0;
   border: 2px solid #fff;
-  flex-shrink: 0;
 }
 
 .avatarStacked {
   border: 2px solid #fff;
+}
+
+.presenceDot {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #b0bec5;
+}
+
+.presenceOnline {
+  background: #4caf50;
+}
+
+.presenceOffline {
+  background: #b0bec5;
 }
 
 .avatar img {

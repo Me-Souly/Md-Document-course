@@ -16,6 +16,14 @@ const messageAuth = 2;
 
 const docStateMap = new WeakMap();
 
+// =======================
+// Presence по заметкам
+// =======================
+// noteId -> Map<userId, connectionCount>
+const presenceByNote = new Map();
+// ws -> { noteId, userId }
+const connectionPresence = new WeakMap();
+
 const toUint8Array = (message) => {
   if (message instanceof Uint8Array) return message;
   if (Array.isArray(message)) return Uint8Array.from(message);
@@ -67,6 +75,38 @@ const getDocState = (docName, doc) => {
 export const setupYjs = (server) => {
   const wss = new WebSocketServer({ server });
 
+  const registerPresence = (noteId, userId, ws) => {
+    let usersMap = presenceByNote.get(noteId);
+    if (!usersMap) {
+      usersMap = new Map();
+      presenceByNote.set(noteId, usersMap);
+    }
+    const current = usersMap.get(userId) || 0;
+    usersMap.set(userId, current + 1);
+    connectionPresence.set(ws, { noteId, userId });
+  };
+
+  const unregisterPresence = (ws) => {
+    const info = connectionPresence.get(ws);
+    if (!info) return;
+    const { noteId, userId } = info;
+    const usersMap = presenceByNote.get(noteId);
+    if (!usersMap) {
+      connectionPresence.delete(ws);
+      return;
+    }
+    const current = usersMap.get(userId) || 0;
+    if (current <= 1) {
+      usersMap.delete(userId);
+    } else {
+      usersMap.set(userId, current - 1);
+    }
+    if (usersMap.size === 0) {
+      presenceByNote.delete(noteId);
+    }
+    connectionPresence.delete(ws);
+  };
+
   wss.on("connection", async (ws, req) => {
     try {
       const url = new URL(req.url, "http://localhost");
@@ -107,6 +147,9 @@ export const setupYjs = (server) => {
       const isReadOnly = permission !== 'edit';
 
       const docName = `yjs/${noteId}`;
+
+      // Регистрируем presence для этой WS-сессии
+      registerPresence(noteId, userId, ws);
       
       // Получаем или создаем документ
       const sharedDoc = getYDoc(docName);
@@ -660,6 +703,8 @@ export const setupYjs = (server) => {
       // Добавляем обработчик на отключение клиента для сохранения состояния
       ws.on('close', () => {
         console.log(`[YJS] Клиент отключился от документа ${docName}`);
+        // Обновляем presence по отключению
+        unregisterPresence(ws);
         const activeConnections = sharedDoc.conns?.size || 0;
         console.log(`[YJS] Активных подключений осталось: ${activeConnections}`);
         
@@ -686,4 +731,13 @@ export const setupYjs = (server) => {
 export const saveAllActiveDocs = async () => {
   // В текущей реализации y-websocket управляет документами самостоятельно.
   // При необходимости можно расширить и сохранять документы по docName.
+};
+
+// Возвращает список userId, у которых сейчас есть хотя бы одно активное WS‑подключение к noteId
+export const getNotePresence = (noteId) => {
+  const usersMap = presenceByNote.get(noteId);
+  if (!usersMap) return [];
+  return Array.from(usersMap.entries())
+    .filter(([, count]) => count > 0)
+    .map(([userId]) => userId);
 };
