@@ -24,9 +24,10 @@ interface NoteCardProps {
   };
   viewMode: 'grid' | 'list';
   onDelete?: () => void;
+  readOnly?: boolean; // Если true, скрывает меню действий (для чужих заметок)
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) => {
+export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, readOnly = false }) => {
   const navigate = useNavigate();
   const sidebarStore = useSidebarStore();
   const toast = useToastContext();
@@ -152,36 +153,38 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
           <div className={styles.noteCardContent}>
             <div className={styles.noteCardHeader}>
               <h3 className={styles.noteTitle}>{note.title || 'Untitled'}</h3>
-              <div className={styles.noteCardActions} ref={menuRef}>
-                <button
-                  className={styles.menuButton}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMenu(!showMenu);
-                  }}
-                >
-                  <MoreVerticalIcon className={styles.menuIcon} />
-                </button>
-                {showMenu && (
-                  <div className={styles.dropdownMenu}>
-                    <button className={styles.dropdownItem} onClick={handleTogglePublic}>
-                      {isPublic ? 'Make private' : 'Make public'}
-                    </button>
-                    <button className={styles.dropdownItem} onClick={handleRename}>
-                      Rename
-                    </button>
-                    <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
-                      Create subnote
-                    </button>
-                    <button
-                      className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
-                      onClick={handleDelete}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
+              {!readOnly && (
+                <div className={styles.noteCardActions} ref={menuRef}>
+                  <button
+                    className={styles.menuButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(!showMenu);
+                    }}
+                  >
+                    <MoreVerticalIcon className={styles.menuIcon} />
+                  </button>
+                  {showMenu && (
+                    <div className={styles.dropdownMenu}>
+                      <button className={styles.dropdownItem} onClick={handleTogglePublic}>
+                        {isPublic ? 'Make private' : 'Make public'}
+                      </button>
+                      <button className={styles.dropdownItem} onClick={handleRename}>
+                        Rename
+                      </button>
+                      <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
+                        Create subnote
+                      </button>
+                      <button
+                        className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
+                        onClick={handleDelete}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {displayPreview ? (
@@ -238,36 +241,38 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete }) 
       >
         <div className={styles.noteCardHeader}>
           <h3 className={styles.noteTitle}>{note.title || 'Untitled'}</h3>
-          <div className={styles.noteCardActions} ref={menuRef}>
-            <button
-              className={styles.menuButton}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(!showMenu);
-              }}
-            >
-              <MoreVerticalIcon className={styles.menuIcon} />
-            </button>
-            {showMenu && (
-              <div className={styles.dropdownMenu}>
-                <button className={styles.dropdownItem} onClick={handleTogglePublic}>
-                  {isPublic ? 'Make private' : 'Make public'}
-                </button>
-                <button className={styles.dropdownItem} onClick={handleRename}>
-                  Rename
-                </button>
-                <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
-                  Create subnote
-                </button>
-                <button
-                  className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
-                  onClick={handleDelete}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
+          {!readOnly && (
+            <div className={styles.noteCardActions} ref={menuRef}>
+              <button
+                className={styles.menuButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(!showMenu);
+                }}
+              >
+                <MoreVerticalIcon className={styles.menuIcon} />
+              </button>
+              {showMenu && (
+                <div className={styles.dropdownMenu}>
+                  <button className={styles.dropdownItem} onClick={handleTogglePublic}>
+                    {isPublic ? 'Make private' : 'Make public'}
+                  </button>
+                  <button className={styles.dropdownItem} onClick={handleRename}>
+                    Rename
+                  </button>
+                  <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
+                    Create subnote
+                  </button>
+                  <button
+                    className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {displayPreview ? (

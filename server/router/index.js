@@ -103,6 +103,8 @@ router.get('/notes/shared',
     authMiddleware, 
     checkUserActive, 
     noteController.getSharedNotes);
+// ВАЖНО: /notes/public должен быть ПЕРЕД /notes/:id, иначе Express будет обрабатывать "public" как :id
+router.get('/notes/public', noteController.getAllPublicNotes);
 router.get('/notes/:id', 
     authMiddleware, 
     checkUserActive, 
@@ -138,8 +140,6 @@ router.get('/notes/:id/presence',
         const userIds = getNotePresence(noteId);
         return res.json({ userIds });
     });
-
-router.get('/notes/public', noteController.getAllPublicNotes);
 
 router.get('/search/notes', 
     authMiddleware, 

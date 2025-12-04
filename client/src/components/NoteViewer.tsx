@@ -120,10 +120,11 @@ export const ReadNote: React.FC<{
   getToken?: () => string | null;
   className?: string;
 }> = ({ noteId, getToken, className }) => {
+  // Используем стабильный ключ, чтобы избежать лишних перерендеров
   return (
     <div className={cx(styles.viewer, className)}>
       <MilkdownEditor
-        key={`preview-only-${noteId}`}
+        key={`read-only-${noteId}`}
         noteId={noteId}
         readOnly={true}
         getToken={getToken}
@@ -839,11 +840,17 @@ export const NoteViewer: React.FC<NoteViewerProps> = ({
   getToken,
   className,
 }) => {
+  // Не рендерим компонент, пока permission не определен
+  if (!permission) {
+    return null;
+  }
+
+  // Используем ключ с permission, чтобы избежать переключения между компонентами
   if (permission === 'read') {
-    return <ReadNote noteId={noteId} getToken={getToken} className={className} />;
+    return <ReadNote key={`read-${noteId}`} noteId={noteId} getToken={getToken} className={className} />;
   }
 
   // сейчас по умолчанию используем SplitEditNote для режима edit
-  return <SplitEditNote noteId={noteId} getToken={getToken} className={className} />;
+  return <SplitEditNote key={`edit-${noteId}`} noteId={noteId} getToken={getToken} className={className} />;
 };
 

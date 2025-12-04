@@ -27,8 +27,7 @@ $api.interceptors.response.use((config) => {
             localStorage.setItem('token', response.data.accessToken);
             return $api.request(originalRequest);
         } catch (e) {
-            console.log('Not authorized');
-            toastManager.error('Сессия истекла. Пожалуйста, войдите снова.');
+            console.log('Not authorized, refresh token failed');
             throw error;
         }
     }

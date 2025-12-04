@@ -27,7 +27,8 @@ class NoteController {
     // DELETE /api/notes/:id
     async delete(req, res, next) {
         try {
-            const deletedNote = await noteService.delete(req.params.id);
+            const userId = req.user.id;
+            const deletedNote = await noteService.delete(req.params.id, userId);
             return res.json(deletedNote);
         } catch (e) {
             next(e);

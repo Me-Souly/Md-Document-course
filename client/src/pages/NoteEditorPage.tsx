@@ -32,6 +32,7 @@ export const NoteEditorPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const lastPresenceKeyRef = useRef<string>('');
 
   useEffect(() => {
@@ -87,16 +88,19 @@ export const NoteEditorPage: React.FC = () => {
 
     const loadSidebarData = async () => {
       try {
-        const [foldersResponse, notesResponse] = await Promise.all([
+        const [foldersResponse, notesResponse, usersResponse] = await Promise.all([
           $api.get('/folders'),
           $api.get('/notes'),
+          $api.get('/users').catch(() => ({ data: [] })), // Загружаем пользователей, но не критично если не получится
         ]);
 
         if (isCancelled) return;
 
         const foldersData = Array.isArray(foldersResponse.data) ? foldersResponse.data : [];
         const notesData = Array.isArray(notesResponse.data) ? notesResponse.data : [];
+        const usersData = Array.isArray(usersResponse.data) ? usersResponse.data : [];
 
+        setUsers(usersData);
         sidebarStore.buildFileTree(foldersData, notesData);
 
         if (noteId) {
@@ -197,12 +201,33 @@ export const NoteEditorPage: React.FC = () => {
         }}
         collaborators={
           noteId && note
-            ? note.access?.map(access => ({
-                id: access.userId,
-                name: `User ${access.userId}`,
-                initials: 'U',
-                isOnline: onlineUserIds.includes(access.userId),
-              })) || []
+            ? note.access?.map(access => {
+                // Ищем пользователя в списке загруженных пользователей
+                const user = users.find(u => 
+                  u.id === access.userId || 
+                  u._id === access.userId ||
+                  String(u.id) === String(access.userId) ||
+                  String(u._id) === String(access.userId)
+                );
+                
+                if (user) {
+                  return {
+                    id: access.userId,
+                    name: user.name || user.login || user.username || `User ${access.userId}`,
+                    login: user.login,
+                    username: user.username,
+                    email: user.email,
+                    isOnline: onlineUserIds.includes(access.userId),
+                  };
+                }
+                
+                // Если пользователь не найден, используем fallback
+                return {
+                  id: access.userId,
+                  name: `User ${String(access.userId).slice(0, 8)}`,
+                  isOnline: onlineUserIds.includes(access.userId),
+                };
+              }) || []
             : []
         }
       />
@@ -221,15 +246,15 @@ export const NoteEditorPage: React.FC = () => {
 
         <div className={styles.container}>
           <div className={styles.editorContainer}>
-            {noteId && note ? (
+            {noteId && note && note.permission ? (
               <NoteViewer
                 noteId={noteId}
                 permission={note.permission as 'edit' | 'read'}
                 getToken={() => localStorage.getItem('token')}
               />
-            ) : (
+            ) : !noteId ? (
               <HomePage />
-            )}
+            ) : null}
           </div>
         </div>
       </div>

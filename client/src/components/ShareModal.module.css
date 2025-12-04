@@ -28,7 +28,9 @@
   width: 90%;
   max-width: 520px;
   max-height: 90vh;
-  overflow: hidden;
+  /* Даём внутренним выпадающим спискам (CustomSelect) выходить за пределы modalBody,
+     общая прокрутка теперь будет на уровне самой модалки */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   animation: slideUp 0.2s ease;
@@ -87,7 +89,9 @@
 .modalBody {
   padding: 24px;
   flex: 1;
-  overflow-y: auto;
+  /* Прокрутка перенесена на уровень .modal,
+     чтобы дропдауны не обрезались контейнером modalBody */
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -255,8 +259,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
+  /* Даём выпадающим спискам (CustomSelect) открываться поверх списка,
+     скролл обрабатывается на уровне .modalBody */
+  max-height: none;
+  overflow: visible;
 }
 
 .collaborator {

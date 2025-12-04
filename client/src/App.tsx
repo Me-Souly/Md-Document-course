@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import LoginForm from './components/LoginForm';
+import { Auth } from './components/auth/Auth';
 import { useAuthStore } from './hooks/useStores';
 import { observer } from 'mobx-react-lite';
 import { IUser } from './models/IUser';
 import UserService from './service/UserService';
 import { NoteEditorPage } from './pages/NoteEditorPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { PublicProfilePage } from './pages/PublicProfilePage';
 import { ToastProvider } from './contexts/ToastContext';
 import axios from 'axios';
 
@@ -40,11 +41,10 @@ function App() {
 
   if(!authStore.isAuth) {
     return (
-      <>
-        <LoginForm />
-        <button onClick={getUsers}>Get User's list</button>
-      </>
-    )
+      <ToastProvider>
+        <Auth />
+      </ToastProvider>
+    );
   }
 
   return (
@@ -54,6 +54,7 @@ function App() {
           <Route path="/" element={<NoteEditorPage />} />
           <Route path="/note/:noteId" element={<NoteEditorPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/user/:userId" element={<PublicProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -21,18 +21,42 @@ class NoteService {
     }
 
     async update(noteId, userId, data) {
+        const note = await noteRepository.findById(noteId);
+        if (!note) throw ApiError.NotFoundError("Note not found");
+        
+        // Проверяем, что пользователь является владельцем заметки
+        if (note.ownerId && note.ownerId.toString() !== userId.toString()) {
+            throw ApiError.Forbidden("Only the owner can update this note");
+        }
+        
         const updated = await noteRepository.updateByIdAtomic(noteId, data);
         if (!updated) throw ApiError.NotFoundError("Note not found");
         return new NoteDto(updated, userId);
     }
 
     async softDelete(noteId, userId) {
-        const note = await noteRepository.softDelete(noteId);
+        const note = await noteRepository.findById(noteId);
         if (!note) throw ApiError.NotFoundError("Note not found");
-        return new NoteDto(note, userId);
+        
+        // Проверяем, что пользователь является владельцем заметки
+        if (note.ownerId && note.ownerId.toString() !== userId.toString()) {
+            throw ApiError.Forbidden("Only the owner can delete this note");
+        }
+        
+        const deletedNote = await noteRepository.softDelete(noteId);
+        if (!deletedNote) throw ApiError.NotFoundError("Note not found");
+        return new NoteDto(deletedNote, userId);
     }
 
-    async delete(noteId) {
+    async delete(noteId, userId) {
+        const note = await noteRepository.findById(noteId);
+        if (!note) throw ApiError.NotFoundError("Note not found");
+        
+        // Проверяем, что пользователь является владельцем заметки
+        if (note.ownerId && note.ownerId.toString() !== userId.toString()) {
+            throw ApiError.Forbidden("Only the owner can delete this note");
+        }
+        
         return await noteRepository.delete(noteId);
     }
 
@@ -40,8 +64,9 @@ class NoteService {
         const note = await noteRepository.findById(noteId);
         if (!note) throw ApiError.NotFoundError("Note not found");
 
-        if (note.ownerId !== userId) {
-            throw ApiError.Forbidden("You cannot restore this note");
+        // Проверяем, что пользователь является владельцем заметки
+        if (note.ownerId && note.ownerId.toString() !== userId.toString()) {
+            throw ApiError.Forbidden("Only the owner can restore this note");
         }
 
         if (!note.isDeleted) {

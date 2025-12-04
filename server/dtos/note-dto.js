@@ -4,6 +4,8 @@ class NoteDto {
     this.title = note.title;
     // this.content = note.ydocState;
     this.rendered = note.rendered;
+    // Владелец заметки (используется, например, для публичного профиля пользователя)
+    this.ownerId = note.ownerId;
     this.folderId = note.folderId;
     this.parentId = note.parentId;
     this.isPublic = note.isPublic;

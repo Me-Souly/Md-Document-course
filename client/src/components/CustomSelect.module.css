@@ -60,9 +60,10 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  overflow: hidden;
-  max-height: 240px;
-  overflow-y: auto;
+  /* Даём дропдауну открываться поверх родительских контейнеров,
+     без собственного скролла — прокрутка остаётся на внешнем уровне */
+  overflow: visible;
+  max-height: none;
   animation: slideDown 0.2s ease;
 }
 
