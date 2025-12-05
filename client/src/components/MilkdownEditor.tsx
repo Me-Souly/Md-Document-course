@@ -22,6 +22,7 @@ type MilkdownEditorProps = {
   onContentChange?: (content: string, meta?: { origin?: 'milkdown' | 'sync' }) => void;
   className?: string;
   getToken?: () => string | null;
+  initialMarkdown?: string; // Предзагрузка текста до синка Yjs, чтобы убрать моргание
   // Optional shared Yjs connection (for split mode optimization)
   sharedConnection?: {
     doc: any;
@@ -49,6 +50,7 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
   onContentChange,
   className,
   getToken,
+  initialMarkdown,
   sharedConnection,
   expectSharedConnection = false,
   onUndo,
@@ -72,7 +74,7 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
     Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root);
-        ctx.set(defaultValueCtx, '');
+        ctx.set(defaultValueCtx, initialMarkdown || '');
       })
       .use(commonmark)
       .use(listener)
@@ -534,6 +536,13 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
         return;
       }
       
+      // Если есть initialMarkdown и он совпадает с текущим содержимым Yjs, не применяем
+      // Это предотвращает моргание при синхронизации, если содержимое уже было применено
+      if (initialMarkdown && markdown === initialMarkdown && !force) {
+        // Уже применено через initialMarkdown, пропускаем
+        return;
+      }
+      
       // Предотвращаем повторное применение, если уже применяем
       if (applyingRemoteRef.current && !force) {
         return;
@@ -571,14 +580,39 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
             // Игнорируем ошибки
           }
         }
+        
+        // Если есть initialMarkdown и текущее содержимое совпадает с ним, не применяем
+        // Это предотвращает перерендер через несколько секунд после синхронизации
+        if (yTextRef.current && initialMarkdown) {
+          const currentMarkdown = yTextRef.current.toString();
+          if (currentMarkdown === initialMarkdown && currentMarkdown === lastMarkdownRef.current) {
+            // Содержимое уже применено и не изменилось, пропускаем
+            return;
+          }
+        }
+        
         // Сохраняем selection для undo-redo, для preview режима (readOnly),
         // и когда редактор в фокусе (пользователь печатает)
         const shouldPreserve = origin === 'undo-redo' || (readOnly && expectSharedConnection) || isEditorFocused;
         applyFromYjs(false, shouldPreserve);
       }
     };
-    const initialMarkdown = text.toString();
-    lastMarkdownRef.current = initialMarkdown;
+    const initialMarkdownFromYjs = text.toString();
+    
+    // Если есть initialMarkdown из пропсов и в Y.Text пока пусто — запишем его сразу,
+    // чтобы не было пустого состояния до синка (убирает моргание).
+    if (initialMarkdown && initialMarkdownFromYjs.length === 0) {
+      try {
+        text.insert(0, initialMarkdown);
+        lastMarkdownRef.current = initialMarkdown;
+      } catch (e) {
+        console.error('[MilkdownEditor] Failed to apply initialMarkdown to Y.Text', e);
+        lastMarkdownRef.current = initialMarkdownFromYjs;
+      }
+    } else {
+      lastMarkdownRef.current = initialMarkdownFromYjs;
+    }
+    
     text.observe(observer);
     observerRef.current = observer;
 
@@ -626,11 +660,12 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
         // Также применяем сразу, если редактор готов (на случай, если синхронизация уже произошла)
         applyInitialState();
         
-        // И пробуем еще несколько раз с задержкой для надежности
-        setTimeout(applyInitialState, 200);
-        setTimeout(applyInitialState, 500);
-        setTimeout(applyInitialState, 1000);
-        setTimeout(applyInitialState, 2000);
+        // Применяем с задержкой только один раз, если синхронизация затянется
+        setTimeout(() => {
+          if (isMounted && editorRef.current) {
+            applyInitialState();
+          }
+        }, 1000);
       };
 
       waitForSync();
@@ -652,15 +687,23 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
         }
       };
 
+      let syncEventApplied = false;
       const handleSync = (isSynced: boolean) => {
         if (!isMounted || !editorRef.current) return;
-        if (isSynced) {
-          // Применяем только один раз после синхронизации
+        if (isSynced && !syncEventApplied) {
+          syncEventApplied = true;
+          // Применяем только один раз после синхронизации, но только если содержимое изменилось
           setTimeout(() => {
-            if (isMounted && editorRef.current) {
-              applyFromYjs();
+            if (isMounted && editorRef.current && yTextRef.current) {
+              const currentMarkdown = yTextRef.current.toString();
+              // Применяем только если содержимое действительно изменилось
+              // И если оно отличается от initialMarkdown (чтобы не перезаписывать уже примененное)
+              if (currentMarkdown !== lastMarkdownRef.current && 
+                  (!initialMarkdown || currentMarkdown !== initialMarkdown)) {
+                applyFromYjs();
+              }
             }
-          }, 300);
+          }, 100);
         }
       };
 
@@ -675,22 +718,11 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
       });
       
       // Проверяем синхронизацию реже и только если редактор готов
-      const syncCheckInterval = setInterval(() => {
-        if (!isMounted || !editorRef.current) {
-          return;
-        }
-        const syncedValue = (provider as any).synced;
-        if (syncedValue) {
-          const currentMarkdown = yTextRef.current?.toString() || '';
-          if (currentMarkdown !== lastMarkdownRef.current) {
-            applyFromYjs();
-          }
-        }
-      }, 2000); // Увеличил интервал до 2 секунд
+      // УБРАНО: этот интервал вызывал лишние перерендеры
+      // Синхронизация уже обрабатывается через события 'sync' и 'synced'
       
       return () => {
         isMounted = false;
-        clearInterval(syncCheckInterval);
         if (provider && typeof provider.off === 'function') {
           provider.off('status', handleStatus);
           provider.off('sync', handleSync);
@@ -723,7 +755,7 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
         }
       };
     }
-  }, [noteId, loading, applyMarkdownToEditor, onContentChange, getToken, readOnly, sharedConnection]);
+  }, [noteId, loading, applyMarkdownToEditor, onContentChange, getToken, readOnly, sharedConnection, initialMarkdown, expectSharedConnection]);
 
   // Дополнительный readOnly‑эффект был удалён, чтобы не конфликтовать с effectiveReadOnly
 

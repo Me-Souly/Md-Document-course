@@ -5,6 +5,7 @@ import { FileSidebar } from '../components/FileSidebar';
 import { TopBar } from '../components/TopBar';
 import { HomePage } from './HomePage';
 import { ShareModal } from '../components/ShareModal';
+import { ActivationBanner } from '../components/ActivationBanner';
 import { useAuthStore, useSidebarStore } from '../hooks/useStores';
 import $api from '../http';
 import styles from './NoteEditorPage.module.css';
@@ -13,6 +14,7 @@ interface NoteData {
   id: string;
   title: string;
   content?: string;
+  rendered?: string;
   ownerId: string;
   isPublic: boolean;
   permission?: 'edit' | 'read' | null;
@@ -33,6 +35,7 @@ export const NoteEditorPage: React.FC = () => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [noteOwnerInfo, setNoteOwnerInfo] = useState<{ login?: string; name?: string } | null>(null);
   const lastPresenceKeyRef = useRef<string>('');
 
   useEffect(() => {
@@ -64,6 +67,21 @@ export const NoteEditorPage: React.FC = () => {
         }
         
         setNote(noteData);
+        
+        // Загружаем информацию о владельце заметки
+        if (noteData.ownerId) {
+          try {
+            const ownerResponse = await $api.get(`/users/${noteData.ownerId}`);
+            setNoteOwnerInfo({
+              login: ownerResponse.data.login,
+              name: ownerResponse.data.name || ownerResponse.data.login,
+            });
+          } catch (ownerError) {
+            console.error('Failed to load owner info:', ownerError);
+            setNoteOwnerInfo(null);
+          }
+        }
+        
         setLoading(false);
       } catch (err: any) {
         const errorMessage = err.response?.data?.message || 'Failed to load note';
@@ -191,10 +209,17 @@ export const NoteEditorPage: React.FC = () => {
 
   return (
     <div className={styles.pageContainer}>
+      <ActivationBanner />
       <TopBar
         noteTitle={noteId && note ? note.title : undefined}
         breadcrumbs={noteId && note ? ['Home', note.title || 'Untitled Note'] : ['Home']}
+        noteOwnerId={noteId && note ? note.ownerId : undefined}
+        noteOwnerLogin={noteOwnerInfo?.login}
+        noteOwnerName={noteOwnerInfo?.name}
         onShareClick={() => {
+          if (!authStore.user?.isActivated) {
+            return;
+          }
           if (noteId && note) {
             setShareModalOpen(true);
           }
@@ -251,6 +276,8 @@ export const NoteEditorPage: React.FC = () => {
                 noteId={noteId}
                 permission={note.permission as 'edit' | 'read'}
                 getToken={() => localStorage.getItem('token')}
+                initialMarkdown={note.rendered || ''}
+                ownerId={note.ownerId}
               />
             ) : !noteId ? (
               <HomePage />

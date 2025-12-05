@@ -142,6 +142,32 @@ class UserService {
     async findById(id) {
         return await userRepository.findById(id);
     }
+
+    /**
+     * Найти пользователя по ID или login
+     * @param {string} identifier - ID пользователя или login
+     * @returns {Promise<UserDto|null>} DTO пользователя или null
+     */
+    async findByIdentifier(identifier) {
+        // Проверяем, является ли identifier ObjectId (24 символа hex)
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(identifier);
+        
+        if (isObjectId) {
+            // Пытаемся найти по ID
+            const userById = await userRepository.findById(identifier);
+            if (userById) {
+                return new UserDto(userById);
+            }
+        }
+        
+        // Если не найден по ID или identifier не похож на ObjectId, ищем по login
+        const userByLogin = await userRepository.findOneBy({ login: identifier.toLowerCase() });
+        if (userByLogin) {
+            return new UserDto(userByLogin);
+        }
+        
+        return null;
+    }
 }
 
 export default new UserService();

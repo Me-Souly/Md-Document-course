@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { FileTreeNode } from '../../types/notes';
 import { MoreVerticalIcon } from '../icons';
-import { useSidebarStore } from '../../hooks/useStores';
+import { useSidebarStore, useAuthStore } from '../../hooks/useStores';
 import { useToastContext } from '../../contexts/ToastContext';
 import { useModal } from '../../hooks/useModal';
 import { Modal } from '../Modal';
+import { observer } from 'mobx-react-lite';
 import $api from '../../http';
 import styles from '../FileSidebar.module.css';
 
@@ -18,37 +19,61 @@ interface TreeNodeMenuProps {
   onDelete?: () => void;
 }
 
-export const TreeNodeMenu: React.FC<TreeNodeMenuProps> = ({ node, isOpen, onToggle, onClose, onDelete }) => {
+export const TreeNodeMenu: React.FC<TreeNodeMenuProps> = observer(({ node, isOpen, onToggle, onClose, onDelete }) => {
   const sidebarStore = useSidebarStore();
+  const authStore = useAuthStore();
   const toast = useToastContext();
   const { modalState, showModal, closeModal } = useModal();
   const isFolder = node.type === 'folder';
+  const isActivated = authStore.user?.isActivated ?? false;
 
   const handleRename = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы редактировать заметки');
+      return;
+    }
     sidebarStore.startEditing(node.id, 'rename');
   };
 
   const handleCreateFolder = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы создавать папки');
+      return;
+    }
     sidebarStore.startEditing(`temp-folder-${Date.now()}`, 'create-folder', node.id);
   };
 
   const handleCreateNote = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы создавать заметки');
+      return;
+    }
     sidebarStore.startEditing(`temp-note-${Date.now()}`, 'create-note', node.id);
   };
 
   const handleCreateSubnote = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы создавать заметки');
+      return;
+    }
     sidebarStore.startEditing(`temp-subnote-${Date.now()}`, 'create-subnote', node.id);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClose();
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы удалять заметки');
+      return;
+    }
     e.stopPropagation();
     onClose();
 
@@ -138,5 +163,5 @@ export const TreeNodeMenu: React.FC<TreeNodeMenuProps> = ({ node, isOpen, onTogg
       )}
     </>
   );
-};
+});
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../../hooks/useStores';
 import { useToastContext } from '../../contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
+import { ForgotPasswordModal } from './ForgotPasswordModal';
 import styles from './Auth.module.css';
 
 // Иконки
@@ -38,6 +39,7 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [formData, setFormData] = useState({
     emailOrUsername: '',
     password: '',
@@ -54,9 +56,16 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
     setLoading(true);
     try {
       await authStore.login(formData.emailOrUsername, formData.password);
-      toast.success('Вход выполнен успешно');
+      // Проверяем, что авторизация действительно прошла успешно
+      if (authStore.isAuth) {
+        toast.success('Вход выполнен успешно');
+      } else {
+        // Если isAuth не стал true, значит была ошибка
+        toast.error('Неверный email/username или пароль');
+      }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || 'Ошибка входа';
+      // Показываем ошибку (skipErrorToast установлен в AuthService, поэтому interceptor не покажет)
+      const errorMessage = error?.response?.data?.message || 'Неверный email/username или пароль';
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -84,6 +93,7 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
               Email или Имя пользователя
             </label>
             <input
+              tabIndex={1}
               id="emailOrUsername"
               type="text"
               placeholder="example@email.com"
@@ -101,6 +111,7 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
             </label>
             <div className={styles.passwordWrapper}>
               <input
+                tabIndex={2}
                 id="loginPassword"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
@@ -122,7 +133,7 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
             <div className={styles.forgotPassword}>
               <button
                 type="button"
-                onClick={onForgotPassword}
+                onClick={() => setShowForgotPasswordModal(true)}
                 className={styles.forgotPasswordLink}
                 disabled={loading}
               >
@@ -148,6 +159,7 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
 
         <div className={styles.cardFooter}>
           <button
+            tabIndex={3}
             type="submit"
             className={styles.submitButton}
             disabled={loading}
@@ -168,6 +180,11 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
           </p>
         </div>
       </form>
+
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+      />
     </div>
   );
 });

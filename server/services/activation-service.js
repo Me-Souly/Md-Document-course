@@ -20,7 +20,8 @@ class ActivationService {
         );
 
         // отправляем письмо
-        const activationLink = `${process.env.API_URL}/api/activate/${activationToken}`;
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+        const activationLink = `${clientUrl}/activate/${activationToken}`;
         mailService.sendActivationMail(user.email, activationLink)
             .catch(err => console.error('Error occured while send mail', err));
         

@@ -141,6 +141,46 @@ class NoteController {
             next(e);
         }
     }
+
+    // GET /api/moderator/public-notes
+    async getModeratorPublicNotes(req, res, next) {
+        try {
+            const notes = await noteService.getAllPublicNotesForModerator();
+            return res.json(notes);
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    // DELETE /api/moderator/notes/:id
+    async deleteNoteAsModerator(req, res, next) {
+        try {
+            const { id } = req.params;
+            const deletedNote = await noteService.deleteNoteAsModerator(id);
+            return res.json({ 
+                success: true, 
+                message: 'Note deleted by moderator',
+                note: deletedNote 
+            });
+        } catch (e) {
+            next(e);
+        }
+    }
+
+    // POST /api/moderator/notes/:id/block
+    async blockNoteAsModerator(req, res, next) {
+        try {
+            const { id } = req.params;
+            const blockedNote = await noteService.blockPublicNoteAsModerator(id);
+            return res.json({ 
+                success: true, 
+                message: 'Note blocked by moderator',
+                note: blockedNote 
+            });
+        } catch (e) {
+            next(e);
+        }
+    }
 }
 
 export default new NoteController();

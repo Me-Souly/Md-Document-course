@@ -14,6 +14,8 @@ import { roleRepository, userRepository } from './repositories/index.js';
 
 // 1. === ИМПОРТИРУЕМ YJS-МОДУЛЬ ===
 import { setupYjs, saveAllActiveDocs } from './yjs/yjs-server.js';
+// 2. === ИМПОРТИРУЕМ REDIS-СЕРВИС ===
+import redisService from './services/redis-service.js';
 
 const PORT = process.env.PORT || 5000;
 const app = express();
@@ -21,6 +23,15 @@ const app = express();
 // --- middlewares ---
 app.use(express.json());
 app.use(cookieParser());
+
+// Логирование всех запросов для отладки (после парсинга body)
+app.use((req, res, next) => {
+    console.log(`[Server] ${req.method} ${req.url}`);
+    if (req.body && Object.keys(req.body).length > 0) {
+        console.log(`[Server] Body:`, { ...req.body, password: req.body.password ? '***' : undefined });
+    }
+    next();
+});
 
 // Настройка CORS с поддержкой нескольких origins
 const allowedOrigins = process.env.CLIENT_URL 
@@ -61,6 +72,21 @@ const start = async () => {
         await mongoose.connect(process.env.DB_URL);
         console.log('MongoDB connected');
 
+        // Подключаемся к Redis (неблокирующее подключение)
+        // Если Redis недоступен, сервер все равно запустится
+        // Используем Promise.race с таймаутом, чтобы не ждать бесконечно
+        try {
+            await Promise.race([
+                redisService.connect(),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Redis connection timeout')), 3000)
+                )
+            ]);
+        } catch (redisError) {
+            console.warn('[Server] Redis connection failed or timed out, continuing without cache');
+            // Продолжаем работу без Redis
+        }
+
         // Создаем HTTP-сервер из Express-приложения
         const server = http.createServer(app);
 
@@ -84,6 +110,10 @@ const start = async () => {
                     // Закрываем соединение с БД
                     await mongoose.connection.close();
                     console.log('[Shutdown] MongoDB connection closed');
+                    
+                    // Закрываем соединение с Redis
+                    await redisService.disconnect();
+                    console.log('[Shutdown] Redis connection closed');
                     
                     console.log('[Shutdown] Сервер завершен корректно');
                     process.exit(0);

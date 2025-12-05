@@ -66,8 +66,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
     setLoading(true);
     try {
       await authStore.registration(formData.email, formData.username, formData.password);
-      toast.success('Регистрация выполнена успешно');
+      // Проверяем, что регистрация действительно прошла успешно
+      if (authStore.isAuth) {
+        toast.success('Регистрация выполнена успешно');
+      } else {
+        // Если isAuth не стал true, значит была ошибка
+        toast.error('Ошибка регистрации');
+      }
     } catch (error: any) {
+      // Показываем ошибку (skipErrorToast установлен в AuthService, поэтому interceptor не покажет)
       const errorMessage = error?.response?.data?.message || 'Ошибка регистрации';
       toast.error(errorMessage);
     } finally {
@@ -96,6 +103,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
               Имя пользователя
             </label>
             <input
+              tabIndex={1}
               id="username"
               type="text"
               placeholder="username"
@@ -112,6 +120,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
               Электронная почта
             </label>
             <input
+              tabIndex={2}
               id="email"
               type="email"
               placeholder="example@email.com"
@@ -129,6 +138,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
             </label>
             <div className={styles.passwordWrapper}>
               <input
+                tabIndex={3}
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
@@ -155,6 +165,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
             </label>
             <div className={styles.passwordWrapper}>
               <input
+                tabIndex={4}
                 id="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="••••••••"
@@ -178,6 +189,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
 
         <div className={styles.cardFooter}>
           <button
+            tabIndex={5}
             type="submit"
             className={styles.submitButton}
             disabled={loading}

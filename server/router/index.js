@@ -32,6 +32,10 @@ router.post('/refresh', authController.refresh);
 //  activation
 //
 router.get('/activate/:token', activationController.activate);
+router.post('/activation/resend', 
+    authMiddleware,
+    checkUserActive,
+    activationController.resendActivation);
 
 //
 //  user control
@@ -47,6 +51,9 @@ router.get('/users',
     checkUserActive,
     activatedMiddleware,
     userController.getUsers);
+
+router.get('/users/:identifier',
+    userController.getUserByIdentifier);
 
 router.patch('/users/me',
     authMiddleware,
@@ -78,18 +85,26 @@ router.post('/password/reset', passwordController.resetPassword);
 //
 router.get('/folders', 
     authMiddleware,
+    checkUserActive,
     folderController.getAll);
 router.get('/folders/:id', 
     authMiddleware,
+    checkUserActive,
     folderController.getById);
 router.post('/folders', 
-    authMiddleware,    
+    authMiddleware,
+    checkUserActive,
+    activatedMiddleware,
     folderController.create);
 router.put('/folders/:id', 
     authMiddleware,
+    checkUserActive,
+    activatedMiddleware,
     folderController.update);
 router.delete('/folders/:id', 
     authMiddleware,
+    checkUserActive,
+    activatedMiddleware,
     folderController.delete);
 
 //
@@ -103,7 +118,6 @@ router.get('/notes/shared',
     authMiddleware, 
     checkUserActive, 
     noteController.getSharedNotes);
-// ВАЖНО: /notes/public должен быть ПЕРЕД /notes/:id, иначе Express будет обрабатывать "public" как :id
 router.get('/notes/public', noteController.getAllPublicNotes);
 router.get('/notes/:id', 
     authMiddleware, 
@@ -111,19 +125,23 @@ router.get('/notes/:id',
     noteController.getById);
 router.post('/notes', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteController.create);
 router.put('/notes/:id', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteController.update);
 router.delete('/notes/:id', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteController.delete);
 router.patch('/notes/:id/restore', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteController.restore);
 
 router.get('/folders/:id/notes', 
@@ -143,7 +161,8 @@ router.get('/notes/:id/presence',
 
 router.get('/search/notes', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteController.searchOwn);
 router.get('/search/notes/public', noteController.searchPublic);
 
@@ -152,7 +171,8 @@ router.get('/search/notes/public', noteController.searchPublic);
 //
 router.post('/notes/:id/access', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteAccessController.addAccess);
 router.get('/notes/:id/access', 
     authMiddleware, 
@@ -160,11 +180,13 @@ router.get('/notes/:id/access',
     noteAccessController.getAccessList);
 router.patch('/notes/:id/access/:userId', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteAccessController.updateAccess);
 router.delete('/notes/:id/access/:userId', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteAccessController.removeAccess);
 
 //
@@ -172,7 +194,8 @@ router.delete('/notes/:id/access/:userId',
 //
 router.post('/notes/:id/share-link', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteAccessController.createShareLink);
 router.get('/notes/:id/share-links', 
     authMiddleware, 
@@ -180,13 +203,15 @@ router.get('/notes/:id/share-links',
     noteAccessController.getShareLinks);
 router.post('/share-link/connect', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteAccessController.connectByShareLink);
 router.get('/share-link/:token/info', 
     noteAccessController.getShareLinkInfo);
 router.delete('/share-link/:token', 
     authMiddleware, 
-    checkUserActive, 
+    checkUserActive,
+    activatedMiddleware,
     noteAccessController.deleteShareLink); 
 
 //
@@ -194,23 +219,48 @@ router.delete('/share-link/:token',
 //
 router.get('/notes/:noteId/comments',
     authMiddleware,
-    // checkUserActive,
+    checkUserActive,
     commentController.getByNote);
 
 router.post('/notes/:noteId/comments',
     authMiddleware,
-    // checkUserActive,
+    checkUserActive,
+    activatedMiddleware,
     body('content', 'Comment cannot be empty').isLength({ min: 1 }),
     commentController.create);
 
 router.delete('/comments/:commentId',
     authMiddleware,
-    // checkUserActive,
+    checkUserActive,
+    activatedMiddleware,
     commentController.delete);
 
 router.post('/comments/:commentId/react',
     authMiddleware,
-    // checkUserActive,
+    checkUserActive,
+    activatedMiddleware,
     body('type', 'Invalid reaction type').isIn(['like', 'dislike', 'heart', 'laugh', 'sad', 'angry']),
     commentController.react);
+
+//
+//  moderator
+//
+router.get('/moderator/public-notes',
+    authMiddleware,
+    checkUserActive,
+    moderatorMiddleware,
+    noteController.getModeratorPublicNotes);
+
+router.delete('/moderator/notes/:id',
+    authMiddleware,
+    checkUserActive,
+    moderatorMiddleware,
+    noteController.deleteNoteAsModerator);
+
+router.post('/moderator/notes/:id/block',
+    authMiddleware,
+    checkUserActive,
+    moderatorMiddleware,
+    noteController.blockNoteAsModerator);
+
 export default router;

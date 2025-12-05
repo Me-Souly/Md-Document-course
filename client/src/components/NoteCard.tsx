@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MoreVerticalIcon, UsersIcon, GlobeIcon } from './icons';
-import { useSidebarStore } from '../hooks/useStores';
+import { useSidebarStore, useAuthStore } from '../hooks/useStores';
 import { useToastContext } from '../contexts/ToastContext';
 import { useModal } from '../hooks/useModal';
 import { Modal } from './Modal';
+import { observer } from 'mobx-react-lite';
 import $api from '../http';
 import styles from './NoteCard.module.css';
 
@@ -25,16 +26,20 @@ interface NoteCardProps {
   viewMode: 'grid' | 'list';
   onDelete?: () => void;
   readOnly?: boolean; // Если true, скрывает меню действий (для чужих заметок)
+  onBlock?: (noteId: string) => void; // Callback для блокировки заметки (для модераторов)
+  showBlockButton?: boolean; // Показывать ли кнопку блокировки
 }
 
-export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, readOnly = false }) => {
+export const NoteCard: React.FC<NoteCardProps> = observer(({ note, viewMode, onDelete, readOnly = false, onBlock, showBlockButton = false }) => {
   const navigate = useNavigate();
   const sidebarStore = useSidebarStore();
+  const authStore = useAuthStore();
   const toast = useToastContext();
   const { modalState, showModal, closeModal } = useModal();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isPublic, setIsPublic] = useState<boolean>(!!note.isShared);
+  const isActivated = authStore.user?.isActivated ?? false;
 
   useEffect(() => {
     setIsPublic(!!note.isShared);
@@ -63,6 +68,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, re
   const handleRename = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы редактировать заметки');
+      return;
+    }
     // Navigate to note and trigger rename in sidebar
     navigate(`/note/${note.id}`);
     setTimeout(() => {
@@ -73,6 +82,10 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, re
   const handleCreateSubnote = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы создавать заметки');
+      return;
+    }
     navigate(`/note/${note.id}`);
     setTimeout(() => {
       sidebarStore.startEditing(`temp-subnote-${Date.now()}`, 'create-subnote', note.id);
@@ -82,6 +95,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, re
   const handleTogglePublic = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
+
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы делать заметки публичными');
+      return;
+    }
 
     const makePublic = !isPublic;
 
@@ -98,6 +116,11 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, re
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
+
+    if (!isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы удалять заметки');
+      return;
+    }
 
     showModal(
       'Удалить заметку',
@@ -153,38 +176,52 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, re
           <div className={styles.noteCardContent}>
             <div className={styles.noteCardHeader}>
               <h3 className={styles.noteTitle}>{note.title || 'Untitled'}</h3>
-              {!readOnly && (
-                <div className={styles.noteCardActions} ref={menuRef}>
+              <div className={styles.noteCardActions}>
+                {showBlockButton && onBlock && (
                   <button
-                    className={styles.menuButton}
+                    className={styles.blockButton}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowMenu(!showMenu);
+                      onBlock(note.id);
                     }}
+                    title="Block this public note"
                   >
-                    <MoreVerticalIcon className={styles.menuIcon} />
+                    🚫
                   </button>
-                  {showMenu && (
-                    <div className={styles.dropdownMenu}>
-                      <button className={styles.dropdownItem} onClick={handleTogglePublic}>
-                        {isPublic ? 'Make private' : 'Make public'}
-                      </button>
-                      <button className={styles.dropdownItem} onClick={handleRename}>
-                        Rename
-                      </button>
-                      <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
-                        Create subnote
-                      </button>
-                      <button
-                        className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
-                        onClick={handleDelete}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+                {!readOnly && (
+                  <div ref={menuRef}>
+                    <button
+                      className={styles.menuButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenu(!showMenu);
+                      }}
+                    >
+                      <MoreVerticalIcon className={styles.menuIcon} />
+                    </button>
+                    {showMenu && (
+                      <div className={styles.dropdownMenu}>
+                        <button className={styles.dropdownItem} onClick={handleTogglePublic}>
+                          {isPublic ? 'Make private' : 'Make public'}
+                        </button>
+                        <button className={styles.dropdownItem} onClick={handleRename}>
+                          Rename
+                        </button>
+                        <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
+                          Create subnote
+                        </button>
+                        <button
+                          className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
+                          onClick={handleDelete}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {displayPreview ? (
@@ -241,38 +278,52 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, re
       >
         <div className={styles.noteCardHeader}>
           <h3 className={styles.noteTitle}>{note.title || 'Untitled'}</h3>
-          {!readOnly && (
-            <div className={styles.noteCardActions} ref={menuRef}>
+          <div className={styles.noteCardActions}>
+            {showBlockButton && onBlock && (
               <button
-                className={styles.menuButton}
+                className={styles.blockButton}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowMenu(!showMenu);
+                  onBlock(note.id);
                 }}
+                title="Block this public note"
               >
-                <MoreVerticalIcon className={styles.menuIcon} />
+                🚫
               </button>
-              {showMenu && (
-                <div className={styles.dropdownMenu}>
-                  <button className={styles.dropdownItem} onClick={handleTogglePublic}>
-                    {isPublic ? 'Make private' : 'Make public'}
-                  </button>
-                  <button className={styles.dropdownItem} onClick={handleRename}>
-                    Rename
-                  </button>
-                  <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
-                    Create subnote
-                  </button>
-                  <button
-                    className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
-                    onClick={handleDelete}
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+            {!readOnly && (
+              <div ref={menuRef}>
+                <button
+                  className={styles.menuButton}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(!showMenu);
+                  }}
+                >
+                  <MoreVerticalIcon className={styles.menuIcon} />
+                </button>
+                {showMenu && (
+                  <div className={styles.dropdownMenu}>
+                    <button className={styles.dropdownItem} onClick={handleTogglePublic}>
+                      {isPublic ? 'Make private' : 'Make public'}
+                    </button>
+                    <button className={styles.dropdownItem} onClick={handleRename}>
+                      Rename
+                    </button>
+                    <button className={styles.dropdownItem} onClick={handleCreateSubnote}>
+                      Create subnote
+                    </button>
+                    <button
+                      className={cn(styles.dropdownItem, styles.dropdownItemDanger)}
+                      onClick={handleDelete}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {displayPreview ? (
@@ -315,5 +366,5 @@ export const NoteCard: React.FC<NoteCardProps> = ({ note, viewMode, onDelete, re
       )}
     </>
   );
-};
+});
 

@@ -12,6 +12,7 @@ type UseNoteYDocParams = {
   noteId: string;
   getToken?: () => string | null;
   enabled?: boolean;
+  initialMarkdown?: string;
 };
 
 type UseNoteYDocResult = {
@@ -39,6 +40,7 @@ export const useNoteYDoc = ({
   noteId,
   getToken,
   enabled = true,
+  initialMarkdown,
 }: UseNoteYDocParams): UseNoteYDocResult => {
   const [markdown, setMarkdown] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +81,16 @@ export const useNoteYDoc = ({
       provider: connection.provider,
       text: connection.text,
     });
+
+    // Если есть initialMarkdown и текст пуст — запишем его сразу,
+    // чтобы не было пустого состояния до синка.
+    if (initialMarkdown && connection.text && connection.text.toString().length === 0) {
+      try {
+        connection.text.insert(0, initialMarkdown);
+      } catch (e) {
+        console.error('[useNoteYDoc] Failed to apply initialMarkdown', e);
+      }
+    }
 
     const updateMarkdown = () => {
       if (!yTextRef.current) return;

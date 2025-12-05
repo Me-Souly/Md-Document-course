@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuthStore } from '../hooks/useStores';
 import $api from '../http';
 import { useToastContext } from '../contexts/ToastContext';
+import ModeratorService from '../service/ModeratorService';
+import { Modal } from '../components/Modal';
 import styles from './PublicProfilePage.module.css';
 import { FileTextIcon, GridIcon, ListIcon } from '../components/icons';
 import { CustomSelect } from '../components/CustomSelect';
@@ -37,12 +40,15 @@ export const PublicProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const toast = useToastContext();
+  const authStore = useAuthStore();
 
   const [user, setUser] = useState<PublicUser | null>(null);
   const [notes, setNotes] = useState<PublicNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [noteToBlock, setNoteToBlock] = useState<PublicNote | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -50,21 +56,19 @@ export const PublicProfilePage: React.FC = () => {
 
       setLoading(true);
       try {
-        // Загружаем всех пользователей и публичные заметки, затем фильтруем по userId
-        const [usersRes, publicNotesRes] = await Promise.all([
-          $api.get('/users'),
-          $api.get('/notes/public'),
+        // Загружаем пользователя по ID или login и публичные заметки
+        const [userRes, publicNotesRes] = await Promise.all([
+          $api.get(`/users/${userId}`).catch(() => ({ data: null })),
+          $api.get('/notes/public').catch(() => ({ data: [] })),
         ]);
 
-        const usersData = Array.isArray(usersRes.data) ? usersRes.data : [];
-        const rawUser = usersData.find((u: any) => u.id === userId || u._id === userId);
-
-        if (!rawUser) {
+        if (!userRes.data) {
           setError('User not found');
           setLoading(false);
           return;
         }
 
+        const rawUser = userRes.data;
         const mappedUser: PublicUser = {
           id: rawUser.id || rawUser._id,
           name: rawUser.name || rawUser.login || 'User',
@@ -150,6 +154,32 @@ export const PublicProfilePage: React.FC = () => {
   };
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const isModerator = authStore.user?.role === 'moderator';
+
+  const handleBlockNote = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (note) {
+      setNoteToBlock(note);
+      setBlockModalOpen(true);
+    }
+  };
+
+  const handleConfirmBlock = async () => {
+    if (!noteToBlock) return;
+
+    try {
+      await ModeratorService.blockNote(noteToBlock.id);
+      // Удаляем заметку из списка после блокировки
+      setNotes((prev) => prev.filter((n) => n.id !== noteToBlock.id));
+      toast.success('Заметка заблокирована');
+      setBlockModalOpen(false);
+      setNoteToBlock(null);
+    } catch (error: any) {
+      console.error('Failed to block note:', error);
+      toast.error(error?.response?.data?.message || 'Не удалось заблокировать заметку');
+    }
+  };
 
   if (loading) {
     return (
@@ -299,6 +329,8 @@ export const PublicProfilePage: React.FC = () => {
                   note={note}
                   viewMode={viewMode}
                   readOnly={true}
+                  showBlockButton={isModerator}
+                  onBlock={handleBlockNote}
                 />
               ))}
             </div>
@@ -315,6 +347,18 @@ export const PublicProfilePage: React.FC = () => {
           )}
         </section>
       </div>
+
+      {/* Block Confirmation Modal */}
+      <Modal
+        isOpen={blockModalOpen}
+        onClose={() => setBlockModalOpen(false)}
+        title="Заблокировать публичную заметку?"
+        message={`Вы уверены, что хотите заблокировать заметку "${noteToBlock?.title}"?\n\nЗаметка станет приватной и будет скрыта из публичного доступа.`}
+        confirmText="Заблокировать"
+        cancelText="Отмена"
+        onConfirm={handleConfirmBlock}
+        variant="danger"
+      />
     </div>
   );
 };

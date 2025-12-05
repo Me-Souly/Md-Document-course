@@ -19,7 +19,8 @@ class PasswordService {
         );
 
         // отправляем письмо
-        const resetLink = `${process.env.API_URL}/api/reset/${resetToken}`;
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+        const resetLink = `${clientUrl}/password/reset/${resetToken}`;
         mailService.sendResetMail(email, resetLink)
             .catch(err => console.error('Error occured while send mail', err));
 

@@ -2,6 +2,7 @@ import ApiError from '../exceptions/api-error.js';
 import { noteRepository } from '../repositories/index.js';
 import NoteDto from '../dtos/note-dto.js';
 import { NoteModel } from '../models/mongo/index.js';
+import { userRepository } from '../repositories/index.js';
 
 class NoteService {
     async getById(noteId, userId) {
@@ -211,6 +212,76 @@ class NoteService {
             console.error(`[NoteService] ✗ ОШИБКА при сохранении YDocState:`, error.message);
             // НЕ выбрасываем ошибку, чтобы не прерывать работу YJS
         }
+    }
+
+    async getAllPublicNotesForModerator() {
+        const notes = await noteRepository.findBy({ 
+            isPublic: true, 
+            isDeleted: false 
+        });
+        
+        // Получаем информацию об авторах
+        const notesWithAuthors = await Promise.all(
+            notes.map(async (note) => {
+                const owner = await userRepository.findById(note.ownerId);
+                return {
+                    id: note._id.toString(),
+                    title: note.title,
+                    ownerId: note.ownerId.toString(),
+                    author: owner ? {
+                        id: owner._id.toString(),
+                        name: owner.name || owner.login,
+                        login: owner.login,
+                        email: owner.email
+                    } : null,
+                    contentPreview: note.meta?.excerpt || note.meta?.searchableContent?.slice(0, 100) || '',
+                    createdAt: note.createdAt,
+                    updatedAt: note.updatedAt,
+                    isPublic: note.isPublic
+                };
+            })
+        );
+        
+        return notesWithAuthors;
+    }
+
+    async deleteNoteAsModerator(noteId) {
+        const note = await noteRepository.findById(noteId);
+        if (!note) {
+            throw ApiError.NotFoundError("Note not found");
+        }
+        
+        // Модератор может удалять любые публичные заметки
+        if (!note.isPublic) {
+            throw ApiError.Forbidden("Moderator can only delete public notes");
+        }
+        
+        const deletedNote = await noteRepository.softDelete(noteId);
+        if (!deletedNote) {
+            throw ApiError.NotFoundError("Note not found");
+        }
+        
+        return new NoteDto(deletedNote, null);
+    }
+
+    async blockPublicNoteAsModerator(noteId) {
+        const note = await noteRepository.findById(noteId);
+        if (!note) {
+            throw ApiError.NotFoundError("Note not found");
+        }
+        
+        // Модератор может блокировать только публичные заметки
+        if (!note.isPublic) {
+            throw ApiError.Forbidden("Moderator can only block public notes");
+        }
+        
+        // Блокируем заметку, делая её приватной
+        const updatedNote = await noteRepository.updateByIdAtomic(noteId, { isPublic: false });
+        if (!updatedNote) {
+            throw ApiError.NotFoundError("Note not found");
+        }
+        
+        return new NoteDto(updatedNote, null);
     }
 }
 

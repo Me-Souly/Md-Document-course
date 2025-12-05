@@ -137,6 +137,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({ open, onOpenChange, note
   };
 
   const handleInvite = async () => {
+    if (!authStore.user?.isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы приглашать пользователей');
+      return;
+    }
+
     if (!inviteEmail.trim()) {
       toast.warning('Введите email или имя пользователя');
       return;
@@ -187,6 +192,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({ open, onOpenChange, note
   };
 
   const handleRemoveCollaborator = async (userId: string) => {
+    if (!authStore.user?.isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы управлять доступом');
+      return;
+    }
+
     if (userId === authStore.user?.id) {
       toast.warning('Нельзя удалить владельца');
       return;
@@ -206,6 +216,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({ open, onOpenChange, note
   };
 
   const handleUpdatePermission = async (userId: string, newPermission: 'read' | 'edit') => {
+    if (!authStore.user?.isActivated) {
+      toast.warning('Активируйте аккаунт, чтобы управлять доступом');
+      return;
+    }
+
     setLoading(true);
     try {
       await $api.patch(`/notes/${noteId}/access/${userId}`, {

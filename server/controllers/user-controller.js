@@ -52,6 +52,20 @@ class UserController {
             next(e);
         }
     }
+
+    // GET /api/users/:identifier (by id or login)
+    async getUserByIdentifier(req, res, next) {
+        try {
+            const { identifier } = req.params;
+            const user = await userService.findByIdentifier(identifier);
+            if (!user) {
+                return next(ApiError.NotFoundError('User not found'));
+            }
+            return res.json(user);
+        } catch (e) {
+            next(e);
+        }
+    }
 }
 
 export default new UserController();

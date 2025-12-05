@@ -8,6 +8,9 @@ import UserService from './service/UserService';
 import { NoteEditorPage } from './pages/NoteEditorPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PublicProfilePage } from './pages/PublicProfilePage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { ActivationPage } from './pages/ActivationPage';
+import { ModeratorDashboard } from './pages/ModeratorDashboard';
 import { ToastProvider } from './contexts/ToastContext';
 import axios from 'axios';
 
@@ -39,23 +42,33 @@ function App() {
     return <div>Loading ┗|｀O′|┛</div>
   }
 
-  if(!authStore.isAuth) {
-    return (
-      <ToastProvider>
-        <Auth />
-      </ToastProvider>
-    );
-  }
-
   return (
     <ToastProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<NoteEditorPage />} />
-          <Route path="/note/:noteId" element={<NoteEditorPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/user/:userId" element={<PublicProfilePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Публичные роуты (доступны без авторизации) */}
+          <Route path="/password/reset/:token" element={<ResetPasswordPage />} />
+          <Route path="/activate/:token" element={<ActivationPage />} />
+          
+          {/* Защищенные роуты */}
+          {authStore.isAuth ? (
+            <>
+              <Route path="/" element={<NoteEditorPage />} />
+              <Route path="/note/:noteId" element={<NoteEditorPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/user/:userId" element={<PublicProfilePage />} />
+              {/* Роут для модераторов */}
+              {authStore.user.role === 'moderator' && (
+                <Route path="/moderator" element={<ModeratorDashboard />} />
+              )}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          ) : (
+            <>
+              <Route path="/" element={<Auth />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          )}
         </Routes>
       </BrowserRouter>
     </ToastProvider>

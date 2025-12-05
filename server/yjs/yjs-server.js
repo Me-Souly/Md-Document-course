@@ -2,7 +2,7 @@
 import * as Y from "yjs";
 import { WebSocketServer } from "ws";
 import { createRequire } from "module";
-import { noteService, noteAccessService, tokenService } from "../services/index.js";
+import { noteService, noteAccessService, tokenService, redisService } from "../services/index.js";
 
 const require = createRequire(import.meta.url);
 const { setupWSConnection, getYDoc } = require("y-websocket/bin/utils");
@@ -163,45 +163,64 @@ export const setupYjs = (server) => {
       // Это нужно, т.к. документ может быть уничтожен после отключения всех клиентов
       let stateLoaded = false;
       if (currentContent.length === 0) {
-        console.log(`[YJS] Документ ${docName} пустой, загрузка из БД...`);
+        console.log(`[YJS] Документ ${docName} пустой, загрузка состояния...`);
         
-        // Загружаем заметку из БД
-        const noteData = await noteService.getNoteById(noteId);
+        // СНАЧАЛА проверяем Redis кэш (быстро)
+        let savedState = await redisService.getYjsState(noteId);
+        let noteData = null;
         
-        if (noteData) {
-          console.log(`[YJS] ✓ Заметка ${noteId} успешно загружена из БД`);
-          console.log(`[YJS] Данные заметки:`, {
-            id: noteData._id || noteData.id,
-            title: noteData.title,
-            hasYdocState: !!noteData.ydocState,
-            ydocStateType: noteData.ydocState ? noteData.ydocState.constructor.name : 'null',
-            ydocStateLength: noteData.ydocState ? noteData.ydocState.length : 0
-          });
-          
-          // Применяем состояние из БД, если оно есть
-          if (noteData.ydocState) {
-            let savedState = null;
+        if (savedState) {
+          console.log(`[YJS] ✓ Состояние найдено в Redis кэше, размер: ${savedState.length} байт`);
+        } else {
+          // Если нет в кэше, загружаем из MongoDB
+          console.log(`[YJS] Состояние не найдено в Redis, загрузка из MongoDB...`);
+          noteData = await noteService.getNoteById(noteId);
+        
+          if (noteData) {
+            console.log(`[YJS] ✓ Заметка ${noteId} успешно загружена из БД`);
+            console.log(`[YJS] Данные заметки:`, {
+              id: noteData._id || noteData.id,
+              title: noteData.title,
+              hasYdocState: !!noteData.ydocState,
+              ydocStateType: noteData.ydocState ? noteData.ydocState.constructor.name : 'null',
+              ydocStateLength: noteData.ydocState ? noteData.ydocState.length : 0
+            });
             
-            // Убеждаемся, что это Buffer или Uint8Array
-            if (Buffer.isBuffer(noteData.ydocState)) {
-              savedState = noteData.ydocState;
-              console.log(`[YJS] ✓ Найдено сохраненное состояние YJS (Buffer), размер: ${savedState.length} байт`);
-            } else if (noteData.ydocState instanceof Uint8Array) {
-              savedState = noteData.ydocState;
-              console.log(`[YJS] ✓ Найдено сохраненное состояние YJS (Uint8Array), размер: ${savedState.length} байт`);
-            } else { 
-              console.log(`[YJS] ⚠ ydocState имеет неожиданный тип: ${noteData.ydocState.constructor.name}`);
-              // Пытаемся преобразовать
-              try {
-                savedState = Buffer.from(noteData.ydocState);
-                console.log(`[YJS] ✓ Преобразовано в Buffer, размер: ${savedState.length} байт`);
-              } catch (e) {
-                console.error(`[YJS] ✗ Ошибка преобразования ydocState:`, e);
+            // Применяем состояние из БД, если оно есть
+            if (noteData.ydocState) {
+              // Убеждаемся, что это Buffer или Uint8Array
+              if (Buffer.isBuffer(noteData.ydocState)) {
+                savedState = noteData.ydocState;
+                console.log(`[YJS] ✓ Найдено сохраненное состояние YJS (Buffer), размер: ${savedState.length} байт`);
+              } else if (noteData.ydocState instanceof Uint8Array) {
+                savedState = noteData.ydocState;
+                console.log(`[YJS] ✓ Найдено сохраненное состояние YJS (Uint8Array), размер: ${savedState.length} байт`);
+              } else { 
+                console.log(`[YJS] ⚠ ydocState имеет неожиданный тип: ${noteData.ydocState.constructor.name}`);
+                // Пытаемся преобразовать
+                try {
+                  savedState = Buffer.from(noteData.ydocState);
+                  console.log(`[YJS] ✓ Преобразовано в Buffer, размер: ${savedState.length} байт`);
+                } catch (e) {
+                  console.error(`[YJS] ✗ Ошибка преобразования ydocState:`, e);
+                }
               }
+              
+              // Сохраняем в Redis кэш для следующих разов
+              if (savedState) {
+                await redisService.setYjsState(noteId, savedState);
+              }
+            } else {
+              console.log(`[YJS] ⚠ Заметка найдена, но нет сохраненного состояния YJS (ydocState = null/undefined)`);
             }
-            
-            if (savedState) {
-              console.log(`[YJS] Применение состояния из БД к документу ${docName}...`);
+          } else {
+            console.log(`[YJS] ✗ Заметка ${noteId} не найдена в БД`);
+          }
+        }
+        
+        // Применяем состояние к документу (из Redis или MongoDB)
+        if (savedState) {
+          console.log(`[YJS] Применение состояния к документу ${docName}...`);
               console.log(`[YJS] Содержимое sharedDoc до применения:`, sharedDoc.toJSON());
               
               // Проверяем первые байты сохранённого состояния для диагностики
@@ -323,7 +342,7 @@ export const setupYjs = (server) => {
                     stateLoaded = true;
                   }
                 }
-                const fallbackContent = typeof noteData.content === 'string' ? noteData.content : '';
+                const fallbackContent = (noteData && typeof noteData.content === 'string') ? noteData.content : '';
                 if (fallbackContent.length > 0) {
                   console.log(`[YJS] ⚠ Состояние пустое, но есть поле content (${fallbackContent.length} символов). Импортируем в Y.Doc.`);
                   sharedDoc.transact(() => {
@@ -339,12 +358,6 @@ export const setupYjs = (server) => {
                 }
               }
             }
-          } else {
-            console.log(`[YJS] ⚠ Заметка найдена, но нет сохраненного состояния YJS (ydocState = null/undefined)`);
-          }
-        } else {
-          console.log(`[YJS] ✗ Заметка ${noteId} не найдена в БД`);
-        }
       } else {
         console.log(`[YJS] Документ ${docName} уже содержит данные (${currentContent.length} символов), пропуск загрузки из БД`);
         stateLoaded = true; // Документ уже содержит данные
@@ -405,7 +418,9 @@ export const setupYjs = (server) => {
             
             // note-service.js автоматически создаст snapshot если размер превышает порог
             await noteService.saveYDocState(noteId, state);
-            console.log(`[YJS] ✓ Сохранено в БД для заметки ${noteId}, размер: ${state.length} байт, текст: ${testText.length} символов`);
+            // Обновляем Redis кэш
+            await redisService.setYjsState(noteId, state);
+            console.log(`[YJS] ✓ Сохранено в БД и Redis для заметки ${noteId}, размер: ${state.length} байт, текст: ${testText.length} символов`);
           } catch (err) {
             console.error(`[YJS] ✗ Ошибка сохранения в БД:`, err.message);
           }

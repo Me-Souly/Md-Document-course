@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MilkdownEditor } from './MilkdownEditor';
 import { useNoteYDoc } from '../hooks/useNoteYDoc';
+import $api from '../http';
 import styles from './NoteViewer.module.css';
 
 const cx = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
@@ -109,6 +111,8 @@ type NoteViewerProps = {
   permission: 'edit' | 'read';
   getToken?: () => string | null;
   className?: string;
+  initialMarkdown?: string;
+  ownerId?: string;
 };
 
 // Максимальный размер истории для undo/redo
@@ -119,7 +123,9 @@ export const ReadNote: React.FC<{
   noteId: string;
   getToken?: () => string | null;
   className?: string;
-}> = ({ noteId, getToken, className }) => {
+  initialMarkdown?: string;
+  ownerId?: string;
+}> = ({ noteId, getToken, className, initialMarkdown, ownerId }) => {
   // Используем стабильный ключ, чтобы избежать лишних перерендеров
   return (
     <div className={cx(styles.viewer, className)}>
@@ -129,6 +135,7 @@ export const ReadNote: React.FC<{
         readOnly={true}
         getToken={getToken}
         className={className}
+        initialMarkdown={initialMarkdown}
       />
     </div>
   );
@@ -139,17 +146,22 @@ export const SplitEditNote: React.FC<{
   noteId: string;
   getToken?: () => string | null;
   className?: string;
-}> = ({ noteId, getToken, className }) => {
+  initialMarkdown?: string;
+  ownerId?: string;
+}> = ({ noteId, getToken, className, initialMarkdown, ownerId }) => {
+  const navigate = useNavigate();
   const { markdown, setMarkdown, isLoading, sharedConnection, applyContentToYjs } = useNoteYDoc({
     noteId,
     getToken,
     enabled: true,
+    initialMarkdown,
   });
 
   const [history, setHistory] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('split');
   const [wordCount, setWordCount] = useState(0);
+  const [ownerInfo, setOwnerInfo] = useState<{ login?: string; name?: string } | null>(null);
   const historyInitializedRef = useRef(false);
   const historyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historyDebounceResetRedoRef = useRef(false);
@@ -769,6 +781,7 @@ export const SplitEditNote: React.FC<{
                     expectSharedConnection
                     onUndo={handleUndo}
                     onRedo={handleRedo}
+                    initialMarkdown={initialMarkdown}
                   />
                 </div>
               </div>
@@ -796,6 +809,7 @@ export const SplitEditNote: React.FC<{
                 expectSharedConnection
                 onUndo={handleUndo}
                 onRedo={handleRedo}
+                initialMarkdown={initialMarkdown}
               />
             </div>
             {/* Editor - показывается только в edit режиме */}
@@ -821,6 +835,22 @@ export const SplitEditNote: React.FC<{
           <span>{wordCount} words</span>
           <span className={styles.bottomBarSeparator}>•</span>
           <span className={styles.bottomBarEditable}>You can edit</span>
+          {ownerInfo && (
+            <>
+              <span className={styles.bottomBarSeparator}>•</span>
+              <button
+                className={styles.ownerButton}
+                onClick={() => {
+                  const identifier = ownerInfo.login || ownerId;
+                  navigate(`/user/${identifier}`);
+                }}
+                title={`View ${ownerInfo.name || ownerInfo.login}'s profile`}
+              >
+                <span className={styles.ownerIcon}>👤</span>
+                <span>{ownerInfo.name || ownerInfo.login}</span>
+              </button>
+            </>
+          )}
         </div>
         <div className={styles.bottomBarRight}>
           <span className={styles.autoSaved}>
@@ -839,6 +869,8 @@ export const NoteViewer: React.FC<NoteViewerProps> = ({
   permission,
   getToken,
   className,
+  initialMarkdown,
+  ownerId,
 }) => {
   // Не рендерим компонент, пока permission не определен
   if (!permission) {
@@ -847,10 +879,28 @@ export const NoteViewer: React.FC<NoteViewerProps> = ({
 
   // Используем ключ с permission, чтобы избежать переключения между компонентами
   if (permission === 'read') {
-    return <ReadNote key={`read-${noteId}`} noteId={noteId} getToken={getToken} className={className} />;
+    return (
+      <ReadNote
+        key={`read-${noteId}`}
+        noteId={noteId}
+        getToken={getToken}
+        className={className}
+        initialMarkdown={initialMarkdown}
+        ownerId={ownerId}
+      />
+    );
   }
 
   // сейчас по умолчанию используем SplitEditNote для режима edit
-  return <SplitEditNote key={`edit-${noteId}`} noteId={noteId} getToken={getToken} className={className} />;
+  return (
+    <SplitEditNote
+      key={`edit-${noteId}`}
+      noteId={noteId}
+      getToken={getToken}
+      className={className}
+      initialMarkdown={initialMarkdown}
+      ownerId={ownerId}
+    />
+  );
 };
 

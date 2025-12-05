@@ -35,10 +35,14 @@ export default class authStore {
             this.setAuth(true);
             this.setUser(response.data.user);
         } catch (e) {
-            if (axios.isAxiosError(e))
+            // Пробрасываем ошибку дальше, чтобы компонент мог её обработать
+            if (axios.isAxiosError(e)) {
                 console.log(e.response?.data?.message);
-            else
+                throw e; // Пробрасываем ошибку
+            } else {
                 console.log(e);
+                throw e; // Пробрасываем ошибку
+            }
         }
     }
 
@@ -50,10 +54,15 @@ export default class authStore {
             this.setAuth(true);
             this.setUser(response.data.user);
         } catch (e) {
-            if (axios.isAxiosError(e))
+            // Пробрасываем ошибку дальше, чтобы компонент мог её обработать
+            console.log(e);
+            if (axios.isAxiosError(e)) {
                 console.log(e.response?.data?.message);
-            else
+                throw e; // Пробрасываем ошибку
+            } else {
                 console.log(e);
+                throw e; // Пробрасываем ошибку
+            }
         }
     }
 

@@ -72,13 +72,19 @@ interface TopBarProps {
     email?: string;
     isOnline?: boolean;
   }>;
+  noteOwnerId?: string;
+  noteOwnerLogin?: string;
+  noteOwnerName?: string;
 }
 
 export const TopBar: React.FC<TopBarProps> = observer(({ 
   noteTitle = 'Untitled Note',
   breadcrumbs = [],
   onShareClick,
-  collaborators = []
+  collaborators = [],
+  noteOwnerId,
+  noteOwnerLogin,
+  noteOwnerName
 }) => {
   const navigate = useNavigate();
   const authStore = useAuthStore();
@@ -418,6 +424,24 @@ export const TopBar: React.FC<TopBarProps> = observer(({
             <span className={cn(styles.breadcrumbItem, styles.breadcrumbItemActive)}>
               {noteTitle}
             </span>
+            {(noteOwnerLogin || noteOwnerId) && (
+              <>
+                <span className={styles.breadcrumbSeparator}>•</span>
+                <button
+                  className={styles.ownerLinkButton}
+                  onClick={() => {
+                    const identifier = noteOwnerLogin || noteOwnerId;
+                    navigate(`/user/${identifier}`);
+                  }}
+                  title={`View ${noteOwnerName || noteOwnerLogin || 'owner'}'s profile`}
+                >
+                  <span className={styles.ownerLinkIcon}>👤</span>
+                  <span className={styles.ownerLinkText}>
+                    {noteOwnerName || noteOwnerLogin || 'Owner'}
+                  </span>
+                </button>
+              </>
+            )}
           </>
         )}
       </div>
@@ -575,7 +599,7 @@ export const TopBar: React.FC<TopBarProps> = observer(({
         </div>
 
         {/* Share Button */}
-        {onShareClick && (
+        {onShareClick && authStore.user?.isActivated && (
           <button
             className={cn(styles.button, styles.buttonOutline)}
             onClick={onShareClick}
@@ -597,7 +621,9 @@ export const TopBar: React.FC<TopBarProps> = observer(({
                 title={collab.name}
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/user/${collab.id}`);
+                  // Используем login если доступен, иначе id
+                  const identifier = collab.login || collab.username || collab.id;
+                  navigate(`/user/${identifier}`);
                 }}
               >
                 <div className={styles.avatarWrapper}>
@@ -620,6 +646,18 @@ export const TopBar: React.FC<TopBarProps> = observer(({
               </button>
             ))}
           </div>
+        )}
+
+        {/* Moderator Button */}
+        {authStore.user?.role === 'moderator' && (
+          <button
+            className={cn(styles.button, styles.buttonOutline)}
+            onClick={() => navigate('/moderator')}
+            title="Moderator Dashboard"
+          >
+            <span className={styles.icon}>🛡️</span>
+            <span className={styles.buttonText}>Moderator</span>
+          </button>
         )}
 
         {/* User Menu */}
