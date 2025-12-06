@@ -127,6 +127,9 @@ class AuthService {
         }
 
         const user = await userService.findById(userData.id);
+        // Загружаем роль пользователя из базы данных (аналогично методу login)
+        const role = await roleService.findOneBy({_id: user.roleId});
+        user.roleId = role;
         const userDto = new UserDto(user);
         const tokens = tokenService.generateSessionTokens({...userDto});
         await tokenService.saveToken(userDto.id, tokens.refreshToken);

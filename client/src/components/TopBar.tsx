@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useStores';
+import { GlobeIcon } from './icons';
 import $api from '../http';
 import styles from './TopBar.module.css';
 
@@ -75,6 +76,7 @@ interface TopBarProps {
   noteOwnerId?: string;
   noteOwnerLogin?: string;
   noteOwnerName?: string;
+  isPublic?: boolean;
 }
 
 export const TopBar: React.FC<TopBarProps> = observer(({ 
@@ -84,7 +86,8 @@ export const TopBar: React.FC<TopBarProps> = observer(({
   collaborators = [],
   noteOwnerId,
   noteOwnerLogin,
-  noteOwnerName
+  noteOwnerName,
+  isPublic = false
 }) => {
   const navigate = useNavigate();
   const authStore = useAuthStore();
@@ -424,6 +427,15 @@ export const TopBar: React.FC<TopBarProps> = observer(({
             <span className={cn(styles.breadcrumbItem, styles.breadcrumbItemActive)}>
               {noteTitle}
             </span>
+            {isPublic && (
+              <>
+                <span className={styles.breadcrumbSeparator}>•</span>
+                <span className={styles.publicBadge} title="Public note">
+                  <GlobeIcon className={styles.publicIcon} />
+                  <span className={styles.publicText}>Public</span>
+                </span>
+              </>
+            )}
             {(noteOwnerLogin || noteOwnerId) && (
               <>
                 <span className={styles.breadcrumbSeparator}>•</span>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToastContext } from '../contexts/ToastContext';
 import { useAuthStore } from '../hooks/useStores';
 import { CustomSelect } from './CustomSelect';
-import { MailIcon, XIcon, CopyIcon, GlobeIcon, LockIcon } from './icons';
+import { MailIcon, XIcon, CopyIcon, GlobeIcon } from './icons';
 import $api from '../http';
 import styles from './ShareModal.module.css';
 

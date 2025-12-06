@@ -216,6 +216,7 @@ export const NoteEditorPage: React.FC = () => {
         noteOwnerId={noteId && note ? note.ownerId : undefined}
         noteOwnerLogin={noteOwnerInfo?.login}
         noteOwnerName={noteOwnerInfo?.name}
+        isPublic={noteId && note ? note.isPublic : false}
         onShareClick={() => {
           if (!authStore.user?.isActivated) {
             return;
@@ -278,6 +279,7 @@ export const NoteEditorPage: React.FC = () => {
                 getToken={() => localStorage.getItem('token')}
                 initialMarkdown={note.rendered || ''}
                 ownerId={note.ownerId}
+                isPublic={note.isPublic}
               />
             ) : !noteId ? (
               <HomePage />

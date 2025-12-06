@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVerticalIcon, UsersIcon, GlobeIcon } from './icons';
+import { MoreVerticalIcon, GlobeIcon } from './icons';
 import { useSidebarStore, useAuthStore } from '../hooks/useStores';
 import { useToastContext } from '../contexts/ToastContext';
 import { useModal } from '../hooks/useModal';

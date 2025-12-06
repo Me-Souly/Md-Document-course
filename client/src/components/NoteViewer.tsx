@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { MilkdownEditor } from './MilkdownEditor';
 import { useNoteYDoc } from '../hooks/useNoteYDoc';
+import { GlobeIcon } from './icons';
 import $api from '../http';
 import styles from './NoteViewer.module.css';
 
@@ -113,6 +114,7 @@ type NoteViewerProps = {
   className?: string;
   initialMarkdown?: string;
   ownerId?: string;
+  isPublic?: boolean;
 };
 
 // Максимальный размер истории для undo/redo
@@ -125,7 +127,8 @@ export const ReadNote: React.FC<{
   className?: string;
   initialMarkdown?: string;
   ownerId?: string;
-}> = ({ noteId, getToken, className, initialMarkdown, ownerId }) => {
+  isPublic?: boolean;
+}> = ({ noteId, getToken, className, initialMarkdown, ownerId, isPublic }) => {
   // Используем стабильный ключ, чтобы избежать лишних перерендеров
   return (
     <div className={cx(styles.viewer, className)}>
@@ -148,7 +151,8 @@ export const SplitEditNote: React.FC<{
   className?: string;
   initialMarkdown?: string;
   ownerId?: string;
-}> = ({ noteId, getToken, className, initialMarkdown, ownerId }) => {
+  isPublic?: boolean;
+}> = ({ noteId, getToken, className, initialMarkdown, ownerId, isPublic }) => {
   const navigate = useNavigate();
   const { markdown, setMarkdown, isLoading, sharedConnection, applyContentToYjs } = useNoteYDoc({
     noteId,
@@ -835,6 +839,15 @@ export const SplitEditNote: React.FC<{
           <span>{wordCount} words</span>
           <span className={styles.bottomBarSeparator}>•</span>
           <span className={styles.bottomBarEditable}>You can edit</span>
+          {isPublic && (
+            <>
+              <span className={styles.bottomBarSeparator}>•</span>
+              <span className={styles.publicBadge} title="Public note">
+                <GlobeIcon className={styles.publicIcon} />
+                <span>Public</span>
+              </span>
+            </>
+          )}
           {ownerInfo && (
             <>
               <span className={styles.bottomBarSeparator}>•</span>
@@ -871,6 +884,7 @@ export const NoteViewer: React.FC<NoteViewerProps> = ({
   className,
   initialMarkdown,
   ownerId,
+  isPublic = false,
 }) => {
   // Не рендерим компонент, пока permission не определен
   if (!permission) {
@@ -887,6 +901,7 @@ export const NoteViewer: React.FC<NoteViewerProps> = ({
         className={className}
         initialMarkdown={initialMarkdown}
         ownerId={ownerId}
+        isPublic={isPublic}
       />
     );
   }
@@ -900,6 +915,7 @@ export const NoteViewer: React.FC<NoteViewerProps> = ({
       className={className}
       initialMarkdown={initialMarkdown}
       ownerId={ownerId}
+      isPublic={isPublic}
     />
   );
 };
