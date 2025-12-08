@@ -625,8 +625,21 @@ export const SplitEditNote: React.FC<{
       return;
     }
     
-    // синхронизация истории при изменениях из Milkdown
+    // Синхронизируем изменения из редактируемого preview обратно в textarea и Yjs
     setMarkdown(content);
+    applyContentToYjs(content);
+    
+    // Обновляем textarea напрямую, если он существует (для split режима)
+    if (textareaRef.current && meta?.origin === 'milkdown') {
+      const cursorPos = textareaRef.current.selectionStart;
+      const scrollTop = textareaRef.current.scrollTop;
+      textareaRef.current.value = content;
+      // Восстанавливаем позицию каретки и скролла
+      textareaRef.current.setSelectionRange(cursorPos, cursorPos);
+      textareaRef.current.scrollTop = scrollTop;
+    }
+    
+    // Синхронизация истории при изменениях из Milkdown
     if (meta?.origin === 'milkdown') {
       scheduleHistoryPush(content, true);
     }
@@ -778,7 +791,7 @@ export const SplitEditNote: React.FC<{
                   <MilkdownEditor
                     key={`preview-${noteId}`}
                     noteId={noteId}
-                    readOnly={true}
+                    readOnly={false}
                     onContentChange={handleContentChange}
                     getToken={getToken}
                     sharedConnection={sharedConnection || undefined}
@@ -806,7 +819,7 @@ export const SplitEditNote: React.FC<{
               <MilkdownEditor
                 key={`preview-${noteId}`}
                 noteId={noteId}
-                readOnly={true}
+                readOnly={previewMode === 'preview'}
                 onContentChange={handleContentChange}
                 getToken={getToken}
                 sharedConnection={sharedConnection || undefined}
