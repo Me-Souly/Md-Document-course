@@ -5,6 +5,7 @@ type ConnectionType = {
   doc: any;
   provider: any;
   text: any;
+  fragment: any;
   destroy: () => void;
 };
 
@@ -23,6 +24,7 @@ type UseNoteYDocResult = {
     doc: any;
     provider: any;
     text: any;
+    fragment: any;
   } | null;
   applyContentToYjs: (newContent: string, origin?: string) => void;
 };
@@ -48,11 +50,13 @@ export const useNoteYDoc = ({
     doc: any;
     provider: any;
     text: any;
+    fragment: any;
   } | null>(null);
 
   const connectionRef = useRef<ConnectionType | null>(null);
   const yTextRef = useRef<any>(null);
   const observerRef = useRef<(() => void) | null>(null);
+  const fragmentRef = useRef<any>(null);
 
   // Создание Yjs‑подключения и подписка на изменения текста
   useEffect(() => {
@@ -75,11 +79,13 @@ export const useNoteYDoc = ({
 
     connectionRef.current = connection;
     yTextRef.current = connection.text;
+    fragmentRef.current = connection.fragment;
 
     setSharedConnection({
       doc: connection.doc,
       provider: connection.provider,
       text: connection.text,
+      fragment: connection.fragment,
     });
 
     // Если есть initialMarkdown и текст пуст — запишем его сразу,
@@ -106,23 +112,13 @@ export const useNoteYDoc = ({
     // начальное значение
     updateMarkdown();
 
-    // также после sync, если провайдер это умеет
-    if (connection.provider && typeof connection.provider.on === 'function') {
-      const handleSync = (isSynced: boolean) => {
-        if (isSynced) {
-          updateMarkdown();
-        }
-      };
-      connection.provider.on('sync', handleSync);
-      connection.provider.on('synced', handleSync);
-    }
-
     return () => {
       if (yTextRef.current && observerRef.current) {
         yTextRef.current.unobserve(observerRef.current);
       }
       observerRef.current = null;
       yTextRef.current = null;
+      fragmentRef.current = null;
 
       if (connectionRef.current) {
         connectionRef.current.destroy();
@@ -196,5 +192,4 @@ export const useNoteYDoc = ({
     applyContentToYjs,
   };
 };
-
 

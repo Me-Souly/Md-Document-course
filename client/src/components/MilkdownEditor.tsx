@@ -6,7 +6,7 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener';
 import { slashFactory } from '@milkdown/plugin-slash';
 import { tooltipFactory } from '@milkdown/plugin-tooltip';
 import { Ctx } from '@milkdown/ctx';
-import { EditorState, Transaction } from 'prosemirror-state';
+import { EditorState } from 'prosemirror-state';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { keymap } from 'prosemirror-keymap';
@@ -15,6 +15,32 @@ import { createNoteConnection } from '../yjs/yjs-connector.js';
 import styles from './MilkdownEditor.module.css';
 
 const cx = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
+const logRender = (...args: any[]) => {
+  // Centralized debug logger for render/sync flow
+  console.log('[MilkdownRender]', ...args);
+};
+
+const findScrollContainer = (node: HTMLElement | null): HTMLElement | null => {
+  if (!node) return null;
+  const preview = node.closest('.previewScroll') as HTMLElement | null;
+  if (preview) return preview;
+  const editorContainer = node.closest('.editorContainer') as HTMLElement | null;
+  if (editorContainer) return editorContainer;
+  let parent = node.parentElement;
+  while (parent && parent !== document.body) {
+    const style = window.getComputedStyle(parent);
+    if (
+      style.overflow === 'auto' ||
+      style.overflow === 'scroll' ||
+      style.overflowY === 'auto' ||
+      style.overflowY === 'scroll'
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+};
 
 type MilkdownEditorProps = {
   noteId: string;
@@ -23,14 +49,13 @@ type MilkdownEditorProps = {
   onContentChange?: (content: string, meta?: { origin?: 'milkdown' | 'sync' }) => void;
   className?: string;
   getToken?: () => string | null;
-  initialMarkdown?: string; // Предзагрузка текста до синка Yjs, чтобы убрать моргание
-  // Optional shared Yjs connection (for split mode optimization)
+  initialMarkdown?: string;
   sharedConnection?: {
     doc: any;
     provider: any;
     text: any;
+    fragment: any;
   };
-  // Indicates that parent component will provide a shared connection (split mode preview)
   expectSharedConnection?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -40,6 +65,7 @@ type ConnectionType = {
   doc: any;
   provider: any;
   text: any;
+  fragment: any;
   destroy: () => void;
 };
 
@@ -61,21 +87,15 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [showLoadingIndicator, setShowLoadingIndicator] = useState(true);
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const [yTextKey, setYTextKey] = useState<any>(null);
 
   const connectionRef = useRef<ConnectionType | null>(null);
   const yTextRef = useRef<any>(null);
-  const observerRef = useRef<(() => void) | null>(null);
+  const yFragmentRef = useRef<any>(null);
+  const observerRef = useRef<((event: any) => void) | null>(null);
   const editorRef = useRef<any>(null);
   const applyingRemoteRef = useRef(false);
-  const lastMarkdownRef = useRef('');
+  const initialApplyDoneRef = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const isUserTypingRef = useRef(false);
-  const savedScrollTopRef = useRef<number>(0);
-  const scrollContainerRef = useRef<HTMLElement | null>(null);
-  const scrollRestoreTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const updateDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isRestoringScrollRef = useRef(false);
 
   const { get, loading } = useEditor((root) =>
     Editor.make()
@@ -94,12 +114,12 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
     [expectSharedConnection, readOnly]
   );
 
-  // Настройка плагинов ProseMirror: добавляем ySyncPlugin (привязка к Y.Text),
+  // Настройка плагинов ProseMirror: добавляем ySyncPlugin (привязка к Y.XmlFragment),
   // отключаем встроенные undo/redo keymap (используем свои), включаем gap/drop cursor
   useEffect(() => {
     if (loading) return;
     const editor = editorRef.current;
-    if (!editor || !yTextKey || !yTextRef.current) return;
+    if (!editor || !yFragmentRef.current) return;
 
     try {
       editor.action((ctx: Ctx) => {
@@ -117,8 +137,8 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
         });
 
         const newPlugins = [
-          // y-prosemirror синхронизирует содержимое напрямую с Y.Text
-          ySyncPlugin(yTextRef.current),
+          // y-prosemirror синхронизирует содержимое напрямую с Y.XmlFragment
+          ySyncPlugin(yFragmentRef.current),
           ...plugins.filter(p => {
             const pluginKey = (p as any).key;
             return pluginKey !== 'undo' && pluginKey !== 'redo';
@@ -141,258 +161,118 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
     } catch (error) {
       console.error('[MilkdownEditor] Error configuring plugins:', error);
     }
-  }, [loading, effectiveReadOnly, yTextKey]);
+  }, [loading, effectiveReadOnly]);
 
 
-  // ySyncPlugin сам обновляет Y.Text, ручной патчинг не нужен
-  const updateYText = useCallback((_markdown?: string) => {}, []);
+  // Запись markdown в Y.Text с диффом (нужно для textarea/undo и как источник markdown)
+  // Запись markdown в Y.Text (дифф)
+  const updateYText = useCallback((markdown: string, origin: string = 'milkdown') => {
+    const text = yTextRef.current;
+    if (!text) return;
+    const doc = text.doc;
+    if (!doc) return;
 
-  const applyMarkdownToEditor = useCallback((markdown: string, preserveSelection: boolean = false) => {
-    // Применяем markdown к редактору
-    
-    const editor = editorRef.current;
-    if (!editor) {
-      return;
+    const previous = text.toString();
+    if (markdown === previous) return;
+
+    const next = markdown ?? '';
+    let start = 0;
+    const prevLength = previous.length;
+    const nextLength = next.length;
+
+    while (start < prevLength && start < nextLength && previous[start] === next[start]) {
+      start += 1;
     }
-    
-    try {
+
+    let endPrev = prevLength;
+    let endNext = nextLength;
+    while (endPrev > start && endNext > start && previous[endPrev - 1] === next[endNext - 1]) {
+      endPrev -= 1;
+      endNext -= 1;
+    }
+
+    const deleteCount = endPrev - start;
+    const insertText = next.slice(start, endNext);
+
+    doc.transact(() => {
+      if (deleteCount > 0) {
+        text.delete(start, deleteCount);
+      }
+      if (insertText.length > 0) {
+        text.insert(start, insertText);
+      }
+    }, origin);
+  }, []);
+
+  const applyMarkdownToEditor = useCallback(
+    (markdown: string, { preserveSelection = false, addToHistory = false }: { preserveSelection?: boolean; addToHistory?: boolean } = {}) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
+      logRender('applyMarkdownToEditor start', {
+        length: markdown.length,
+        preserveSelection,
+        addToHistory,
+      });
+
       editor.action((ctx: Ctx) => {
-      const parser = ctx.get(parserCtx);
-      const view = ctx.get(editorViewCtx);
+        const parser = ctx.get(parserCtx);
+        const view = ctx.get(editorViewCtx);
         if (!parser || !view) {
-          console.warn('[MilkdownEditor] [DEBUG] No parser or view!');
+          logRender('applyMarkdownToEditor abort: no parser/view');
           return;
         }
-        
-        // В readOnly режиме сохраняем позицию скролла и восстанавливаем её после обновления
-        // Это предотвращает сброс скролла в начало при обновлении preview
-        if (effectiveReadOnly) {
-          console.log('[MilkdownEditor] [DEBUG] applyMarkdownToEditor called in readOnly mode, markdown length:', markdown.length);
-          console.log('[MilkdownEditor] [DEBUG] view.dom:', view.dom, 'view.dom.parentElement:', view.dom.parentElement);
-          
-          // Находим скроллируемый контейнер - это может быть .previewScroll (внешний) или .editorContainer (внутренний)
-          // Ищем все возможные скроллируемые контейнеры и выбираем тот, который действительно скроллится
-          let scrollContainer: HTMLElement | null = null;
-          
-          // Сначала ищем .previewScroll (контейнер из NoteViewer)
-          const previewScroll = view.dom.closest('.previewScroll') as HTMLElement;
-          if (previewScroll) {
-            scrollContainer = previewScroll;
-            console.log('[MilkdownEditor] [DEBUG] Found .previewScroll container');
-          } else {
-            // Если не нашли, ищем .editorContainer (внутренний контейнер редактора)
-            const editorContainer = view.dom.closest('.editorContainer') as HTMLElement;
-            if (editorContainer) {
-              scrollContainer = editorContainer;
-              console.log('[MilkdownEditor] [DEBUG] Found .editorContainer');
-            } else {
-              // Если не нашли, ищем любой родительский элемент с overflow
-              let parent = view.dom.parentElement;
-              while (parent && parent !== document.body) {
-                const style = window.getComputedStyle(parent);
-                if (style.overflow === 'auto' || style.overflow === 'scroll' || 
-                    style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                  scrollContainer = parent;
-                  console.log('[MilkdownEditor] [DEBUG] Found parent with overflow:', parent.className);
-                  break;
-                }
-                parent = parent.parentElement;
-              }
-            }
-          }
-          
-          // Сохраняем найденный контейнер в ref
-          if (scrollContainer && !scrollContainerRef.current) {
-            scrollContainerRef.current = scrollContainer;
-            console.log('[MilkdownEditor] [DEBUG] Saved scroll container to ref');
-          } else if (scrollContainer) {
-            scrollContainerRef.current = scrollContainer;
-          }
-          
-          // Сохраняем текущую позицию СКРОЛЛА (не каретки!) перед обновлением
-          // В readOnly режиме нет каретки, только скролл контейнера
-          if (scrollContainerRef.current) {
-            savedScrollTopRef.current = scrollContainerRef.current.scrollTop;
-            console.log('[MilkdownEditor] [DEBUG] ✅ Saved SCROLL position (not caret!):', savedScrollTopRef.current, 'px');
-            console.log('[MilkdownEditor] [DEBUG] Container:', scrollContainerRef.current.className, 'scrollHeight:', scrollContainerRef.current.scrollHeight, 'clientHeight:', scrollContainerRef.current.clientHeight);
-          } else {
-            console.warn('[MilkdownEditor] [DEBUG] ❌ No scroll container found! Cannot save scroll position.');
-          }
-          
-          const doc = parser(markdown);
-          if (!doc) {
-            console.warn('[MilkdownEditor] [DEBUG] Parser returned null');
-            return;
-          }
-          
-          console.log('[MilkdownEditor] [DEBUG] Before update - scrollTop:', scrollContainerRef.current?.scrollTop, 'saved:', savedScrollTopRef.current);
-          
-          // Используем transaction для обновления документа вместо полного пересоздания состояния
-          // Это помогает сохранить скролл, т.к. не пересоздается весь DOM
-          try {
-            const tr = view.state.tr;
-            // Заменяем весь контент документа новым
-            tr.replaceWith(0, view.state.doc.content.size, doc.content);
-            tr.setMeta('addToHistory', false); // Не добавляем в историю для readOnly обновлений
-            tr.setMeta('preserveScroll', true); // Флаг для сохранения скролла
-            
-            console.log('[MilkdownEditor] [DEBUG] Dispatching transaction, old doc size:', view.state.doc.content.size, 'new doc size:', doc.content.size);
-            
-            // Применяем transaction
-            view.dispatch(tr);
-            
-            console.log('[MilkdownEditor] [DEBUG] After dispatch - scrollTop:', scrollContainerRef.current?.scrollTop);
-          } catch (e) {
-            // Если transaction не сработал, используем старый способ
-            console.warn('[MilkdownEditor] [DEBUG] Transaction failed, using updateState:', e);
-            let newState = EditorState.create({
-              schema: view.state.schema,
-              doc,
-              plugins: view.state.plugins
-            });
-            view.updateState(newState);
-            console.log('[MilkdownEditor] [DEBUG] After updateState - scrollTop:', scrollContainerRef.current?.scrollTop);
-          }
-          
-          // Восстанавливаем позицию СКРОЛЛА (не каретки!) после обновления
-          // Используем несколько попыток с разными задержками для надежности
-          if (scrollContainerRef.current && savedScrollTopRef.current >= 0) {
-            console.log('[MilkdownEditor] [DEBUG] 🔄 Starting SCROLL restoration (not caret!), saved position:', savedScrollTopRef.current, 'px');
-            
-            // Очищаем предыдущий timeout, если он есть
-            if (scrollRestoreTimeoutRef.current) {
-              clearTimeout(scrollRestoreTimeoutRef.current);
-            }
-            
-            isRestoringScrollRef.current = true;
-            
-            // Функция для восстановления СКРОЛЛА (не каретки!)
-            const restoreScroll = (attempt: number) => {
-              if (scrollContainerRef.current && savedScrollTopRef.current >= 0) {
-                const before = scrollContainerRef.current.scrollTop;
-                scrollContainerRef.current.scrollTop = savedScrollTopRef.current;
-                const after = scrollContainerRef.current.scrollTop;
-                const success = Math.abs(after - savedScrollTopRef.current) < 5; // Допускаем погрешность 5px
-                console.log(`[MilkdownEditor] [DEBUG] 🔄 Scroll restore attempt ${attempt}: before=${before}px, after=${after}px, target=${savedScrollTopRef.current}px, success=${success}`);
-                if (!success && attempt === 4) {
-                  console.error('[MilkdownEditor] [DEBUG] ❌ FAILED to restore scroll after all attempts!');
-                }
-              } else {
-                console.warn(`[MilkdownEditor] [DEBUG] Cannot restore scroll attempt ${attempt}: container=${!!scrollContainerRef.current}, saved=${savedScrollTopRef.current}`);
-              }
-            };
-            
-            // Пробуем восстановить несколько раз, т.к. DOM может обновляться асинхронно
-            // Используем requestAnimationFrame для синхронизации с рендером
-            requestAnimationFrame(() => {
-              restoreScroll(1);
-              // Дополнительные попытки с небольшими задержками
-              setTimeout(() => restoreScroll(2), 0);
-              setTimeout(() => restoreScroll(3), 10);
-              setTimeout(() => {
-                restoreScroll(4);
-                isRestoringScrollRef.current = false;
-                console.log('[MilkdownEditor] [DEBUG] Finished scroll restoration attempts');
-              }, 50);
-            });
-          } else {
-            console.warn('[MilkdownEditor] [DEBUG] Cannot restore scroll - no container or saved position is 0, container:', scrollContainerRef.current, 'saved:', savedScrollTopRef.current);
-          }
-          console.log('[MilkdownEditor] [DEBUG] ===== applyMarkdownToEditor END (readOnly) =====');
-          return;
-        }
-        
-        // Для редактируемого режима ВСЕГДА сохраняем selection, даже если в момент вызова редактор не в фокусе
-        // Это критично для предотвращения сброса каретки, т.к. вызовы могут приходить асинхронно
-        const isFocused = view.hasFocus() || document.activeElement === view.dom;
-        let savedSelection: { from: number; to: number } | null = null;
-        let hadFocus = false;
-        
-        // Сохраняем selection если редактор в фокусе ИЛИ если явно запрошено сохранение
-        if (isFocused || preserveSelection) {
-          hadFocus = isFocused;
-          if (view.state.selection) {
-            const { from, to } = view.state.selection;
-            savedSelection = { from, to };
-          }
-        }
-        
+
         const doc = parser(markdown);
-        if (!doc) return;
-        
-        // Используем transaction вместо updateState для более точного контроля
-        // Это позволяет сохранить selection лучше
-        try {
-          const tr = view.state.tr;
-          tr.replaceWith(0, view.state.doc.content.size, doc.content);
-          tr.setMeta('addToHistory', false);
-          
-          // Если нужно сохранить selection, пытаемся восстановить её в transaction
-          if (savedSelection && (preserveSelection || hadFocus)) {
-            const maxPos = tr.doc.content.size;
-            const validFrom = Math.min(savedSelection.from, maxPos);
-            const validTo = Math.min(savedSelection.to, maxPos);
-            
-            if (validFrom >= 0 && validTo >= validFrom) {
-              const { TextSelection } = require('prosemirror-state');
-              const selection = TextSelection.create(tr.doc, validFrom, validTo);
-              tr.setSelection(selection);
-            }
+        if (!doc) {
+          logRender('applyMarkdownToEditor abort: parser returned null');
+          return;
+        }
+
+        // Preserve scroll in read-only preview mode to avoid jump on re-render
+        let savedScrollTop: number | null = null;
+        let scrollContainer: HTMLElement | null = null;
+        if (effectiveReadOnly) {
+          scrollContainer = findScrollContainer(view.dom as HTMLElement);
+          if (scrollContainer) {
+            savedScrollTop = scrollContainer.scrollTop;
+            logRender('applyMarkdownToEditor save scroll', {
+              top: savedScrollTop,
+              height: scrollContainer.scrollHeight,
+            });
           }
-          
-          view.dispatch(tr);
-        } catch (e) {
-          // Fallback на updateState если transaction не сработал
-          const newState = EditorState.create({
-            schema: view.state.schema,
-            doc,
-            plugins: view.state.plugins
-          });
-          view.updateState(newState);
         }
-        
-        // Дополнительное восстановление selection через requestAnimationFrame для надежности
-        if (savedSelection && (preserveSelection || hadFocus)) {
-          requestAnimationFrame(() => {
-            try {
-              const maxPos = view.state.doc.content.size;
-              const validFrom = Math.min(savedSelection!.from, maxPos);
-              const validTo = Math.min(savedSelection!.to, maxPos);
-              
-              if (validFrom >= 0 && validTo >= validFrom) {
-                const { TextSelection } = require('prosemirror-state');
-                const selection = TextSelection.create(view.state.doc, validFrom, validTo);
-                const tr = view.state.tr.setSelection(selection);
-                view.dispatch(tr);
-              }
-            } catch (e) {
-              // Игнорируем ошибки
-            }
-          });
+
+        const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
+        tr.setMeta('addToHistory', addToHistory);
+
+        if (preserveSelection) {
+          const { from, to } = view.state.selection;
+          const maxPos = tr.doc.content.size;
+          const validFrom = Math.min(from, maxPos);
+          const validTo = Math.min(to, maxPos);
+          const { TextSelection } = require('prosemirror-state');
+          tr.setSelection(TextSelection.create(tr.doc, validFrom, validTo));
         }
-        
-        // Восстанавливаем фокус, если он был
-        if (hadFocus) {
+
+        view.dispatch(tr);
+        logRender('applyMarkdownToEditor dispatched', {
+          docSize: tr.doc.content.size,
+          selectionPreserved: preserveSelection,
+        });
+
+        if (effectiveReadOnly && scrollContainer && savedScrollTop !== null) {
           requestAnimationFrame(() => {
-            if (view.dom && document.activeElement !== view.dom) {
-              view.focus();
-            }
+            scrollContainer!.scrollTop = savedScrollTop!;
+            logRender('applyMarkdownToEditor restore scroll', {
+              top: scrollContainer!.scrollTop,
+            });
           });
         }
       });
-    } catch (error) {
-      console.error('[MilkdownEditor] Error applying markdown:', error);
-    }
-  }, [effectiveReadOnly]);
-
-  // Set up shared connection immediately if provided (before editor initialization)
-  useEffect(() => {
-    if (sharedConnection) {
-      yTextRef.current = sharedConnection.text;
-      const initialMarkdown = sharedConnection.text.toString();
-      lastMarkdownRef.current = initialMarkdown;
-    }
-  }, [sharedConnection]);
+    },
+    [effectiveReadOnly]
+  );
 
   const computeReadOnlyState = useCallback(
     () => (expectSharedConnection ? false : readOnly),
@@ -521,8 +401,8 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
         if (!manager) return;
       manager.markdownUpdated((_ctx: unknown, markdown: string) => {
         if (applyingRemoteRef.current) return;
-          onContentChange?.(markdown, { origin: 'milkdown' });
-        updateYText(markdown);
+        onContentChange?.(markdown, { origin: 'milkdown' });
+        updateYText(markdown, 'milkdown');
       });
     });
     } catch (error) {
@@ -554,6 +434,7 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
       // Use shared connection
       provider = sharedConnection.provider;
       text = sharedConnection.text;
+      const fragment = sharedConnection.fragment;
       // Create a minimal connection object for compatibility
       connection = {
         doc: sharedConnection.doc,
@@ -568,7 +449,7 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
       } as ConnectionType;
       connectionRef.current = connection;
       yTextRef.current = text;
-      setYTextKey(text);
+      yFragmentRef.current = fragment;
     } else {
       // Create new connection
       const token = getToken ? getToken() : localStorage.getItem('token');
@@ -587,169 +468,109 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
       provider = connection.provider;
       text = connection.text;
     yTextRef.current = text;
-      setYTextKey(text);
+      yFragmentRef.current = connection.fragment;
       shouldDestroyConnection = true;
     }
 
-    // Если Y.Text пуст и есть initialMarkdown, запишем его один раз.
+    // Если Y.Text пуст и есть initialMarkdown — запишем его один раз
     if (initialMarkdown && yTextRef.current && yTextRef.current.length === 0) {
       try {
         yTextRef.current.insert(0, initialMarkdown);
-        lastMarkdownRef.current = initialMarkdown;
       } catch (e) {
         console.error('[MilkdownEditor] Failed to set initialMarkdown into Y.Text', e);
       }
     }
 
-    // ySyncPlugin синхронизирует содержимое автоматически, ручное применение не нужно
-    const applyFromYjs = () => {};
+    // Наблюдаем Y.Text: на внешние/textarea изменения парсим markdown в ProseMirror,
+    // чтобы заполнить XmlFragment. Пропускаем локальные изменения Milkdown и фокус.
+    const observer = (event: any) => {
+      const origin = event?.transaction?.origin;
+      if (origin === 'milkdown' || origin === 'markdown-editor') return;
+      if (applyingRemoteRef.current) return;
 
-    // ySyncPlugin сам обновляет ProseMirror, observer не нужен
-    const initialMarkdownFromYjs = text.toString();
-    
-    // Если есть initialMarkdown из пропсов и в Y.Text пока пусто — запишем его сразу,
-    // чтобы не было пустого состояния до синка (убирает моргание).
-    if (initialMarkdown && initialMarkdownFromYjs.length === 0) {
+      const editorInstance = editorRef.current;
+      if (!editorInstance) return;
+
+      let editorFocused = false;
       try {
-        text.insert(0, initialMarkdown);
-        lastMarkdownRef.current = initialMarkdown;
-      } catch (e) {
-        console.error('[MilkdownEditor] Failed to apply initialMarkdown to Y.Text', e);
-        lastMarkdownRef.current = initialMarkdownFromYjs;
+        editorInstance.action((ctx: Ctx) => {
+          const view = ctx.get(editorViewCtx);
+          if (view) {
+            editorFocused = view.hasFocus() || document.activeElement === view.dom;
+          }
+        });
+      } catch {
+        // ignore
       }
-    } else {
-      lastMarkdownRef.current = initialMarkdownFromYjs;
-    }
-    
-    observerRef.current = null;
+      if (editorFocused) return; // не трогаем, если пользователь печатает
 
-    // Начальное состояние отображается напрямую через ySyncPlugin, доп. применение не требуется
-    const applyInitialState = () => {};
+      const markdown = yTextRef.current?.toString?.() ?? '';
+      logRender('Y.Text observer -> apply to editor', {
+        origin,
+        length: markdown.length,
+      });
+      applyingRemoteRef.current = true;
+      applyMarkdownToEditor(markdown, { addToHistory: false, preserveSelection: false });
+      applyingRemoteRef.current = false;
+      onContentChange?.(markdown, { origin: 'sync' });
+    };
 
-    // Применяем начальное значение
-    // Для shared connection применяем сразу, для нового connection ждем синхронизации
-    if (sharedConnection) {
-      applyInitialState();
-      setTimeout(applyInitialState, 100);
-      setTimeout(applyInitialState, 300);
-    } else {
-      // Ждем синхронизации с сервером перед применением начального состояния
-      const waitForSync = () => {
-        if (!provider || typeof provider.on !== 'function') {
-          // Если нет провайдера, применяем сразу
-          applyInitialState();
-          return;
-        }
+    yTextRef.current?.observe(observer);
+    observerRef.current = observer;
 
-        const handleSync = (isSynced: boolean) => {
-          if (isSynced) {
-            applyInitialState();
-            // Удаляем обработчик после первого успешного применения
-            provider.off('sync', handleSync);
-            provider.off('synced', handleSync);
-          }
-        };
-
-        provider.on('sync', handleSync);
-        provider.on('synced', handleSync);
-
-        // Также применяем сразу, если редактор готов (на случай, если синхронизация уже произошла)
-        applyInitialState();
-        
-        // Применяем с задержкой только один раз, если синхронизация затянется
-        setTimeout(() => {
-          if (isMounted && editorRef.current) {
-            applyInitialState();
-          }
-        }, 1000);
-      };
-
-      waitForSync();
+    // Первичное заполнение XmlFragment: если есть markdown — применяем к редактору.
+    const initialMarkdownToApply = yTextRef.current?.toString?.() ?? '';
+    if (!initialApplyDoneRef.current && initialMarkdownToApply && editorRef.current) {
+      logRender('Initial markdown apply to editor from Y.Text', {
+        length: initialMarkdownToApply.length,
+      });
+      applyingRemoteRef.current = true;
+      applyMarkdownToEditor(initialMarkdownToApply, { addToHistory: false, preserveSelection: false });
+      applyingRemoteRef.current = false;
+      initialApplyDoneRef.current = true;
+    } else if (initialApplyDoneRef.current) {
+      logRender('Initial markdown apply skipped (already applied)');
     }
 
-    // Также применяем после подключения и синхронизации, чтобы получить состояние с сервера
+    // Подписки на статус/ошибки для индикаторов
+    let offStatus: (() => void) | undefined;
+    let offError: (() => void) | undefined;
+
     if (provider && typeof provider.on === 'function') {
       const handleStatus = (event: { status: string }) => {
         if (!isMounted) return;
         setIsConnected(event.status === 'connected');
         if (event.status === 'connected') {
           setError(null);
-          // Применяем состояние после подключения, но только если редактор готов
-          setTimeout(() => {
-            if (isMounted && editorRef.current) {
-              applyFromYjs();
-            }
-          }, 800);
         }
       };
-
-      // ySyncPlugin сам обновляет контент, дополнительные sync‑обработчики не нужны
-      const handleSync = () => {};
-
-      provider.on('status', handleStatus);
-      provider.on('sync', handleSync);
-      provider.on('synced', handleSync);
-
-      provider.on('connection-error', (err: Error) => {
+      const handleError = (err: Error) => {
         if (!isMounted) return;
         setError(err.message);
         setIsConnected(false);
-      });
-      
-      // Проверяем синхронизацию реже и только если редактор готов
-      // УБРАНО: этот интервал вызывал лишние перерендеры
-      // Синхронизация уже обрабатывается через события 'sync' и 'synced'
-      
-      return () => {
-        isMounted = false;
-        if (provider && typeof provider.off === 'function') {
-          provider.off('status', handleStatus);
-          provider.off('sync', handleSync);
-          provider.off('synced', handleSync);
-          provider.off('connection-error');
-        }
-        if (updateDebounceTimeoutRef.current) {
-          clearTimeout(updateDebounceTimeoutRef.current);
-          updateDebounceTimeoutRef.current = null;
-        }
-        if (scrollRestoreTimeoutRef.current) {
-          clearTimeout(scrollRestoreTimeoutRef.current);
-          scrollRestoreTimeoutRef.current = null;
-        }
-        if (yTextRef.current && observerRef.current) {
-          yTextRef.current.unobserve(observerRef.current);
-        }
-        observerRef.current = null;
-        yTextRef.current = null;
-
-        if (connectionRef.current && shouldDestroyConnection) {
-          connectionRef.current.destroy();
-          connectionRef.current = null;
-        }
       };
-    } else {
-      return () => {
-        isMounted = false;
-        if (updateDebounceTimeoutRef.current) {
-          clearTimeout(updateDebounceTimeoutRef.current);
-          updateDebounceTimeoutRef.current = null;
-        }
-        if (scrollRestoreTimeoutRef.current) {
-          clearTimeout(scrollRestoreTimeoutRef.current);
-          scrollRestoreTimeoutRef.current = null;
-        }
-        if (yTextRef.current && observerRef.current) {
-          yTextRef.current.unobserve(observerRef.current);
-        }
-        observerRef.current = null;
-        yTextRef.current = null;
 
-        if (connectionRef.current && shouldDestroyConnection) {
-          connectionRef.current.destroy();
-          connectionRef.current = null;
-        }
-      };
+      provider.on('status', handleStatus);
+      provider.on('connection-error', handleError);
+      offStatus = () => provider.off?.('status', handleStatus);
+      offError = () => provider.off?.('connection-error', handleError);
     }
+
+    return () => {
+      isMounted = false;
+      offStatus?.();
+      offError?.();
+      if (yTextRef.current && observerRef.current) {
+        yTextRef.current.unobserve(observerRef.current);
+      }
+      observerRef.current = null;
+      yTextRef.current = null;
+
+      if (connectionRef.current && shouldDestroyConnection) {
+        connectionRef.current.destroy();
+        connectionRef.current = null;
+      }
+    };
   }, [noteId, loading, applyMarkdownToEditor, onContentChange, getToken, readOnly, sharedConnection, initialMarkdown, expectSharedConnection]);
 
   // Дополнительный readOnly‑эффект был удалён, чтобы не конфликтовать с effectiveReadOnly

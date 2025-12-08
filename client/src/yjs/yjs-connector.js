@@ -25,9 +25,8 @@ export function createNoteConnection({ noteId, token, wsUrl }) {
     });
 
     const text = doc.getText("content");
-    const initialText = text.toString();
+    const fragment = doc.getXmlFragment("prosemirror");
     console.log(`[yjs-connector] Создание соединения для заметки ${noteId}`);
-    console.log(`[yjs-connector] Начальное состояние text: длина = ${initialText.length}, первые 50 символов: "${initialText.substring(0, 50)}"`);
 
     // Логируем события provider
     if (provider && typeof provider.on === 'function') {
@@ -47,6 +46,7 @@ export function createNoteConnection({ noteId, token, wsUrl }) {
         doc,
         provider,
         text,
+        fragment,
         destroy() {
             console.log(`[yjs-connector] Уничтожение соединения для заметки ${noteId}`);
             if (provider) {
