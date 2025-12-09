@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { NoteViewer } from '../components/NoteViewer';
-import { FileSidebar } from '../components/FileSidebar';
-import { TopBar } from '../components/TopBar';
+import { NoteViewer } from '@components/notes/NoteViewer';
+import { FileSidebar } from '@components/sidebar/FileSidebar';
+import { TopBar } from '@components/common/layout/topbar';
 import { HomePage } from './HomePage';
-import { ShareModal } from '../components/ShareModal';
-import { ActivationBanner } from '../components/ActivationBanner';
-import { useAuthStore, useSidebarStore } from '../hooks/useStores';
-import $api from '../http';
-import styles from './NoteEditorPage.module.css';
+import { ShareModal } from '@components/modals/ShareModal';
+import { ActivationBanner } from '@components/modals/ActivationBanner';
+import { useAuthStore, useSidebarStore } from '@hooks/useStores';
+import $api from '@http';
+import * as styles from './NoteEditorPage.module.css';
 
 interface NoteData {
   id: string;

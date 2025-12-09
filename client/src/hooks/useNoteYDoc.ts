@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createNoteConnection } from '../yjs/yjs-connector.js';
+import { createNoteConnection } from '@yjs/yjs-connector.js';
 
 type ConnectionType = {
   doc: any;

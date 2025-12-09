@@ -1,32 +1,9 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../../hooks/useStores';
-import { useToastContext } from '../../contexts/ToastContext';
+import { useAuthStore } from '@hooks/useStores';
+import { useToastContext } from '@contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
-import styles from './Auth.module.css';
-
-// Иконки
-const EyeIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const EyeOffIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-    <line x1="1" y1="1" x2="23" y2="23" />
-  </svg>
-);
-
-const UserPlusIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="8.5" cy="7" r="4" />
-    <line x1="20" y1="8" x2="20" y2="14" />
-    <line x1="23" y1="11" x2="17" y2="11" />
-  </svg>
-);
+import { Button, Input, PasswordInput, FormField, UserPlusIcon } from '@components/common/ui';
+import * as styles from './Auth.module.css';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -35,8 +12,6 @@ interface RegisterFormProps {
 export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToLogin }) => {
   const authStore = useAuthStore();
   const toast = useToastContext();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -98,104 +73,84 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
 
       <form onSubmit={handleSubmit}>
         <div className={styles.cardContent}>
-          <div className={styles.field}>
-            <label htmlFor="username" className={styles.label}>
-              Имя пользователя
-            </label>
-            <input
-              tabIndex={1}
+          <FormField
+            label="Имя пользователя"
+            htmlFor="username"
+            required
+          >
+            <Input
               id="username"
               type="text"
               placeholder="username"
               value={formData.username}
               onChange={handleChange('username')}
               required
-              className={styles.input}
               disabled={loading}
+              tabIndex={1}
             />
-          </div>
+          </FormField>
 
-          <div className={styles.field}>
-            <label htmlFor="email" className={styles.label}>
-              Электронная почта
-            </label>
-            <input
-              tabIndex={2}
+          <FormField
+            label="Электронная почта"
+            htmlFor="email"
+            required
+          >
+            <Input
               id="email"
               type="email"
               placeholder="example@email.com"
               value={formData.email}
               onChange={handleChange('email')}
               required
-              className={styles.input}
               disabled={loading}
+              tabIndex={2}
             />
-          </div>
+          </FormField>
 
-          <div className={styles.field}>
-            <label htmlFor="password" className={styles.label}>
-              Пароль
-            </label>
-            <div className={styles.passwordWrapper}>
-              <input
-                tabIndex={3}
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange('password')}
-                required
-                className={styles.input}
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className={styles.passwordToggle}
-                disabled={loading}
-              >
-                {showPassword ? <EyeOffIcon className={styles.eyeIcon} /> : <EyeIcon className={styles.eyeIcon} />}
-              </button>
-            </div>
-          </div>
+          <FormField
+            label="Пароль"
+            htmlFor="password"
+            required
+          >
+            <PasswordInput
+              id="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange('password')}
+              required
+              disabled={loading}
+              tabIndex={3}
+            />
+          </FormField>
 
-          <div className={styles.field}>
-            <label htmlFor="confirmPassword" className={styles.label}>
-              Подтверждение пароля
-            </label>
-            <div className={styles.passwordWrapper}>
-              <input
-                tabIndex={4}
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange('confirmPassword')}
-                required
-                className={styles.input}
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className={styles.passwordToggle}
-                disabled={loading}
-              >
-                {showConfirmPassword ? <EyeOffIcon className={styles.eyeIcon} /> : <EyeIcon className={styles.eyeIcon} />}
-              </button>
-            </div>
-          </div>
+          <FormField
+            label="Подтверждение пароля"
+            htmlFor="confirmPassword"
+            required
+          >
+            <PasswordInput
+              id="confirmPassword"
+              placeholder="••••••••"
+              value={formData.confirmPassword}
+              onChange={handleChange('confirmPassword')}
+              required
+              disabled={loading}
+              tabIndex={4}
+            />
+          </FormField>
         </div>
 
         <div className={styles.cardFooter}>
-          <button
-            tabIndex={5}
+          <Button
             type="submit"
-            className={styles.submitButton}
+            variant="primary"
+            fullWidth
+            loading={loading}
             disabled={loading}
+            tabIndex={5}
           >
             {loading ? 'Регистрация...' : 'Зарегистрироваться'}
-          </button>
+          </Button>
 
           <p className={styles.switchText}>
             Уже есть аккаунт?{' '}

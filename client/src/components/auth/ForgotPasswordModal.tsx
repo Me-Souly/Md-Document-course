@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../../hooks/useStores';
-import { useToastContext } from '../../contexts/ToastContext';
+import { useAuthStore } from '@hooks/useStores';
+import { useToastContext } from '@contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
-import styles from './ForgotPasswordModal.module.css';
+import * as styles from './ForgotPasswordModal.module.css';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;

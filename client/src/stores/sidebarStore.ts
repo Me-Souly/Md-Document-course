@@ -1,6 +1,6 @@
 import { makeAutoObservable } from 'mobx';
 import RootStore from './RootStore';
-import { FileTreeNode } from '../types/notes';
+import { FileTreeNode } from '@app-types/notes';
 
 type FolderNodeInput = {
   id: string;

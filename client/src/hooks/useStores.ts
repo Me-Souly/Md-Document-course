@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { StoreContext } from '../index';
-import RootStore from '../stores/RootStore';
+import RootStore from '@stores/RootStore';
 
 /**
  * Хук для удобного доступа к сторам из компонентов

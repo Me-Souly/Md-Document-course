@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../hooks/useStores';
-import { useToastContext } from '../contexts/ToastContext';
-import styles from './ProfilePage.module.css';
-import $api from '../http';
+import { useAuthStore } from '@hooks/useStores';
+import { useToastContext } from '@contexts/ToastContext';
+import * as styles from './ProfilePage.module.css';
+import $api from '@http';
 
 type TabKey = 'profile' | 'security' | 'preferences';
 

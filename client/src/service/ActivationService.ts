@@ -1,10 +1,6 @@
-import $api from "../http";
+import $api from "@http";
 import type { AxiosResponse } from "axios";
-
-export interface ActivationResponse {
-    success: boolean;
-    message: string;
-}
+import type { ActivationResponse } from "@models/response/ActivationResponse";
 
 export default class ActivationService {
     static async resendActivation(): Promise<AxiosResponse<ActivationResponse>> {

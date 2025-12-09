@@ -1,7 +1,7 @@
 import React, { createContext, useContext, ReactNode, useEffect } from 'react';
-import { useToast } from '../hooks/useToast';
-import { ToastContainer } from '../components/ToastContainer';
-import { toastManager } from '../utils/toastManager';
+import { useToast } from '@hooks/useToast';
+import { ToastContainer } from '@components/common/ui/ToastContainer';
+import { toastManager } from '@utils/toastManager';
 
 interface ToastContextType {
   success: (message: string, duration?: number) => string;

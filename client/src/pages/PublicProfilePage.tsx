@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuthStore } from '../hooks/useStores';
-import $api from '../http';
-import { useToastContext } from '../contexts/ToastContext';
-import ModeratorService from '../service/ModeratorService';
-import { Modal } from '../components/Modal';
-import styles from './PublicProfilePage.module.css';
-import { FileTextIcon, GridIcon, ListIcon } from '../components/icons';
-import { CustomSelect } from '../components/CustomSelect';
-import { NoteCard } from '../components/NoteCard';
+import { useAuthStore } from '@hooks/useStores';
+import $api from '@http';
+import { useToastContext } from '@contexts/ToastContext';
+import ModeratorService from '@service/ModeratorService';
+import { Modal } from '@components/common/ui/Modal';
+import * as styles from './PublicProfilePage.module.css';
+import { FileTextIcon, GridIcon, ListIcon } from '@components/common/ui/icons';
+import { CustomSelect } from '@components/common/ui/CustomSelect';
+import { NoteCard } from '@components/notes/NoteCard';
 
 type SortOption = 'recent' | 'popular' | 'oldest';
 

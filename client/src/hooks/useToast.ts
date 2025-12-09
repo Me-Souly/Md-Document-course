@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ToastData, ToastType } from '../components/Toast';
+import { ToastData, ToastType } from '@components/common/ui/Toast';
 
 let toastIdCounter = 0;
 

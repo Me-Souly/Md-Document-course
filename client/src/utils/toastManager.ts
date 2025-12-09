@@ -1,4 +1,4 @@
-import { ToastData, ToastType } from '../components/Toast';
+import { ToastData, ToastType } from '@components/common/ui/Toast';
 
 type ToastCallback = (toast: ToastData) => void;
 

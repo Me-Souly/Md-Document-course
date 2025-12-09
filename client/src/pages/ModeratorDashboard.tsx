@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../hooks/useStores';
-import ModeratorService, { PublicNoteForModerator } from '../service/ModeratorService';
-import { Modal } from '../components/Modal';
-import styles from './ModeratorDashboard.module.css';
+import { useAuthStore } from '@hooks/useStores';
+import ModeratorService from '@service/ModeratorService';
+import type { PublicNoteForModerator } from '@models/response/ModeratorResponse';
+import { Modal } from '@components/common/ui/Modal';
+import { FileTextIcon, SearchIcon, TrashIcon } from '@components/common/ui/icons';
+import * as styles from './ModeratorDashboard.module.css';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -105,7 +107,7 @@ export const ModeratorDashboard: React.FC = () => {
         </div>
         <nav className={styles.nav}>
           <Link to="/moderator" className={styles.navItemActive}>
-            <span className={styles.navIcon}>📄</span>
+            <FileTextIcon className={styles.navIcon} />
             <span>Обзор Публичных Заметок</span>
           </Link>
         </nav>
@@ -130,7 +132,7 @@ export const ModeratorDashboard: React.FC = () => {
           {/* Search Bar */}
           <div className={styles.searchContainer}>
             <div className={styles.searchWrapper}>
-              <span className={styles.searchIcon}>🔍</span>
+              <SearchIcon className={styles.searchIcon} />
               <input
                 type="text"
                 placeholder="Поиск по названию или автору..."
@@ -200,7 +202,7 @@ export const ModeratorDashboard: React.FC = () => {
                           className={styles.deleteButton}
                           title="Удалить заметку"
                         >
-                          🗑️
+                          <TrashIcon />
                         </button>
                       </td>
                     </tr>

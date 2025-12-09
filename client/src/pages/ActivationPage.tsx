@@ -1,22 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../hooks/useStores';
-import { useToastContext } from '../contexts/ToastContext';
+import { useAuthStore } from '@hooks/useStores';
+import { useToastContext } from '@contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
-import styles from './ActivationPage.module.css';
-
-const CheckIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const MailIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-    <polyline points="22,6 12,13 2,6" />
-  </svg>
-);
+import { CheckIcon, MailIcon } from '@components/common/ui/icons';
+import * as styles from './ActivationPage.module.css';
 
 export const ActivationPage: React.FC = observer(() => {
   const { token } = useParams<{ token: string }>();

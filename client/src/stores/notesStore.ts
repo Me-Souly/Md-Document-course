@@ -1,13 +1,6 @@
 import { makeAutoObservable } from 'mobx';
 import RootStore from './RootStore';
-
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Note } from '@app-types/notes';
 
 /**
  * Store для управления заметками

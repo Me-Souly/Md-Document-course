@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
-import styles from './Auth.module.css';
+import * as styles from './Auth.module.css';
 
 type AuthView = 'login' | 'register';
 

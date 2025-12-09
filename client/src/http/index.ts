@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { AuthResponse } from '../models/response/AuthResponse';
-import { toastManager } from '../utils/toastManager';
+import { AuthResponse } from '@models/response/AuthResponse';
+import { toastManager } from '@utils/toastManager';
 
-export const API_URL = `http://localhost:5000/api`
+export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const $api = axios.create({
     withCredentials: true, // чтобы к каждому запросу куки цеплялись автоматически

@@ -1,6 +1,14 @@
 /**
- * Типы для файлового дерева заметок
+ * Типы для заметок и файлового дерева
  */
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface FileTreeNode {
   id: string;

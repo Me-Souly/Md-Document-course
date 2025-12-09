@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { NoteCard } from '../components/NoteCard';
-import { CustomSelect } from '../components/CustomSelect';
-import $api from '../http';
-import styles from './HomePage.module.css';
-import { GridIcon, ListIcon } from '../components/icons';
+import { NoteCard } from '@components/notes/NoteCard';
+import { CustomSelect } from '@components/common/ui/CustomSelect';
+import $api from '@http';
+import * as styles from './HomePage.module.css';
+import { GridIcon, ListIcon } from '@components/common/ui/icons';
 
 type ViewMode = 'grid' | 'list';
 type SortOption = 'date-edited' | 'date-created' | 'a-z' | 'z-a';
