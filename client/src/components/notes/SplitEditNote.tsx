@@ -93,35 +93,7 @@ export const SplitEditNote: React.FC<SplitEditNoteProps> = ({
     }
   }, [markdown, isLoading, initializeHistory]);
 
-  // Принудительно обновляем preview при переключении режима
-  useEffect(() => {
-    if ((previewMode === 'preview' || previewMode === 'split') && sharedConnection && sharedConnection.text && markdown !== undefined && !isLoading) {
-      const timers: ReturnType<typeof setTimeout>[] = [];
-      
-      [100, 300, 500, 800].forEach((delay) => {
-        const timer = setTimeout(() => {
-          if (sharedConnection && sharedConnection.text) {
-            const currentText = sharedConnection.text.toString();
-            if (currentText !== markdown || delay === 100) {
-              sharedConnection.doc.transact(() => {
-                if (currentText.length > 0) {
-                  sharedConnection.text.delete(0, currentText.length);
-                }
-                if (markdown && markdown.length > 0) {
-                  sharedConnection.text.insert(0, markdown);
-                }
-              }, 'sync');
-            }
-          }
-        }, delay);
-        timers.push(timer);
-      });
-      
-      return () => {
-        timers.forEach(timer => clearTimeout(timer));
-      };
-    }
-  }, [previewMode, markdown, sharedConnection, isLoading]);
+  // Принудительный ресинк удалён, чтобы не триггерить лишние транзакции и эхо
 
   const handleMarkdownChange = (newContent: string) => {
     if (newContent === markdown) return;
@@ -241,10 +213,15 @@ export const SplitEditNote: React.FC<SplitEditNoteProps> = ({
   }, [handleUndo, handleRedo]);
 
   const handleContentChange = (content: string, meta?: { origin?: 'milkdown' | 'sync' }) => {
-    if (meta?.origin === 'sync' && isUndoRedoInProgressRef.current) {
+    // Изменения, пришедшие по Websocket (origin = 'sync'), не отправляем обратно в Y.Text,
+    // чтобы не создавать эхо-цикл и не дублировать текст. Просто обновляем локальный стейт.
+    const isRemote = meta?.origin === 'sync';
+    if (isRemote) {
+      setMarkdown(content);
       return;
     }
     
+    // Локальные изменения из Milkdown или textarea — сохраняем в состояние и отправляем в Y.Text.
     setMarkdown(content);
     applyContentToYjs(content);
     

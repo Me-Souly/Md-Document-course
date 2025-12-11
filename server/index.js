@@ -46,9 +46,15 @@ app.use(cors({
             return callback(null, true);
         }
         
-        // Для разработки разрешаем все localhost порты
+        // Для разработки разрешаем все localhost порты и локальные IP-адреса
         if (process.env.NODE_ENV !== 'production') {
             if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+                return callback(null, true);
+            }
+            // Разрешаем запросы с локальных IP-адресов (для доступа с телефона в той же сети)
+            // Проверяем, что это локальный IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+            const localIpPattern = /^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+):\d+$/;
+            if (localIpPattern.test(origin)) {
                 return callback(null, true);
             }
         }
@@ -95,7 +101,12 @@ const start = async () => {
         setupYjs(server);
 
         // Запускаем ОБЩИЙ сервер (HTTP + WS)
-        server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+        // Слушаем на 0.0.0.0, чтобы быть доступным из локальной сети
+        server.listen(PORT, '0.0.0.0', () => {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`Server accessible at http://0.0.0.0:${PORT}`);
+            console.log(`Local access: http://localhost:${PORT}`);
+        });
 
         // Graceful shutdown: сохраняем все Yjs документы перед завершением
         const gracefulShutdown = async (signal) => {

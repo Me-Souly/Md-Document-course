@@ -10,10 +10,24 @@ import { WebsocketProvider } from "y-websocket";
  * @param {string} options.wsUrl - URL WebSocket сервера (опционально)
  * @returns {Object} Объект с doc, provider, text и методом destroy
  */
+function resolveWsHost(wsUrl) {
+    // 1) env override
+    if (wsUrl) return wsUrl;
+    // 2) derive from current origin (works for phone in одной сети)
+    if (typeof window !== 'undefined' && window.location) {
+        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const host = window.location.hostname;
+        const port = process.env.REACT_APP_WS_PORT || '5000';
+        return `${proto}://${host}:${port}`;
+    }
+    // 3) fallback
+    return "ws://localhost:5000";
+}
+
 export function createNoteConnection({ noteId, token, wsUrl }) {
     const doc = new Y.Doc();
 
-    const host = wsUrl || "ws://localhost:5000";
+    const host = resolveWsHost(wsUrl);
     const room = `yjs/${noteId}`;
 
     const provider = new WebsocketProvider(host, room, doc, {

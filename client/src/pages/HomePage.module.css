@@ -99,7 +99,8 @@
 }
 
 .loading,
-.empty {
+.empty,
+.error {
   width: 100%;
   height: 100vh;
   display: flex;

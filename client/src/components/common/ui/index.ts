@@ -22,5 +22,8 @@ export { CustomSelect } from './CustomSelect';
 export { Toast } from './Toast';
 export { ToastContainer } from './ToastContainer';
 
+export { Loader } from './Loader';
+export type { LoaderProps } from './Loader';
+
 export * from './icons';
 

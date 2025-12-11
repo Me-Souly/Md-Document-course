@@ -1,8 +1,20 @@
 import axios from 'axios';
 import { AuthResponse } from '@models/response/AuthResponse';
 import { toastManager } from '@utils/toastManager';
+import { getToken, setToken } from '@utils/tokenStorage';
 
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const resolveApiUrl = () => {
+    if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
+    if (typeof window !== 'undefined' && window.location) {
+        const proto = window.location.protocol;
+        const host = window.location.hostname;
+        const port = process.env.REACT_APP_API_PORT || '5000';
+        return `${proto}//${host}:${port}/api`;
+    }
+    return 'http://localhost:5000/api';
+};
+
+export const API_URL = resolveApiUrl();
 
 const $api = axios.create({
     withCredentials: true, // чтобы к каждому запросу куки цеплялись автоматически
@@ -10,7 +22,10 @@ const $api = axios.create({
 })
 
 $api.interceptors.request.use((config) => {
-    config.headers.Authorization = `Bearer ${localStorage.getItem('token')}`;
+    const token = getToken();
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
 })
 
@@ -24,7 +39,9 @@ $api.interceptors.response.use((config) => {
         originalRequest._isRetry = true;
         try {
             const response = await axios.post<AuthResponse>(`${API_URL}/refresh`, {withCredentials: true}); 
-            localStorage.setItem('token', response.data.accessToken);
+            // При обновлении токена сохраняем в то же хранилище, что и было
+            const rememberMe = localStorage.getItem('rememberMe') === 'true';
+            setToken(response.data.accessToken, rememberMe);
             return $api.request(originalRequest);
         } catch (e) {
             console.log('Not authorized, refresh token failed');

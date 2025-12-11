@@ -6,11 +6,9 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener';
 import { slashFactory } from '@milkdown/plugin-slash';
 import { tooltipFactory } from '@milkdown/plugin-tooltip';
 import { Ctx } from '@milkdown/ctx';
-import { EditorState } from 'prosemirror-state';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { keymap } from 'prosemirror-keymap';
-import { ySyncPlugin } from 'y-prosemirror';
 import { useYjsConnection } from './hooks/useYjsConnection';
 import { useMarkdownSync } from './hooks/useMarkdownSync';
 import { useYjsTextUpdate } from './hooks/useYjsTextUpdate';
@@ -72,7 +70,7 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
 
   const effectiveReadOnly = expectSharedConnection ? false : readOnly;
 
-  const { connection, yText, yFragment, error } = useYjsConnection({
+  const { connection, yText, error } = useYjsConnection({
     noteId,
     readOnly,
     getToken,
@@ -86,7 +84,6 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
   const { applyMarkdownToEditor, setupYTextObserver, applyInitialMarkdown, applyingRemoteRef } = useMarkdownSync({
     editorRef,
     effectiveReadOnly,
-    useYSyncPlugin: expectSharedConnection && !!sharedConnection && !!yFragment,
     onContentChange: (content, meta) => {
       onContentChange?.(content, meta);
       // Обновляем Y.Text только если изменения пришли от самого редактора
@@ -101,15 +98,12 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
     },
   });
 
-  // Настройка плагинов ProseMirror
-  // ВАЖНО: ySyncPlugin используется только для синхронизации изменений из самого редактора
-  // Изменения из Y.Text (textarea) применяются напрямую через applyMarkdownToEditor
-  // Это предотвращает конфликты между Y.Text и YXmlFragment
+  // Настройка плагинов ProseMirror (кастомные хоткеи + курсоры)
   useEffect(() => {
     if (loading) return;
     if (!isEditorReady) return;
     const editor = editorRef.current;
-    if (!editor || !yFragment) return;
+    if (!editor) return;
 
     try {
       editor.action((ctx: Ctx) => {
@@ -119,29 +113,13 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
         const state = view.state;
         const plugins = state.plugins;
 
-        // Проверяем, не добавлен ли уже ySyncPlugin
-        const hasYSyncPlugin = plugins.some((p: any) => {
-          const key = p.key;
-          return key && (key.toString().includes('yjs') || key.toString().includes('ySync'));
-        });
-
-        if (hasYSyncPlugin) {
-          // Плагин уже добавлен, не добавляем повторно
-          return;
-        }
-
         const customKeymap = keymap({
           'Mod-z': () => true,
           'Mod-y': () => true,
           'Mod-Shift-z': () => true,
         });
 
-        // Создаем ySyncPlugin только для синхронизации изменений из самого редактора
-        // Изменения из Y.Text применяются напрямую и НЕ синхронизируются через ySyncPlugin
-        const ySync = ySyncPlugin(yFragment);
-
         const newPlugins = [
-          ySync,
           ...plugins.filter(p => {
             const pluginKey = (p as any).key;
             return pluginKey !== 'undo' && pluginKey !== 'redo';
@@ -153,18 +131,12 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
           newPlugins.push(gapCursor(), dropCursor());
         }
 
-        const newState = EditorState.create({
-          doc: state.doc,
-          plugins: newPlugins,
-          schema: state.schema,
-        });
-
-        view.updateState(newState);
+        view.updateState(view.state.reconfigure({ plugins: newPlugins }));
       });
     } catch (error) {
       console.error('[MilkdownEditor] Error configuring plugins:', error);
     }
-  }, [loading, isEditorReady, effectiveReadOnly, yFragment]);
+  }, [loading, isEditorReady, effectiveReadOnly]);
 
   // Сохраняем ссылку на редактор после инициализации
   useEffect(() => {

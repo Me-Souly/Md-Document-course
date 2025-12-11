@@ -4,6 +4,8 @@ import { useAuthStore } from '@hooks/useStores';
 import { useToastContext } from '@contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
 import { CheckIcon, MailIcon } from '@components/common/ui/icons';
+import { Loader } from '@components/common/ui';
+import ActivationService from '@service/ActivationService';
 import * as styles from './ActivationPage.module.css';
 
 export const ActivationPage: React.FC = observer(() => {
@@ -21,13 +23,11 @@ export const ActivationPage: React.FC = observer(() => {
       return;
     }
 
-    // Активация происходит на сервере при переходе по ссылке из письма
-    // Сервер редиректит на /activate/:token, но активация уже выполнена
-    // Просто проверяем статус пользователя
-    const checkActivation = async () => {
+    // Активация происходит на сервере через API запрос
+    const activateAccount = async () => {
       try {
-        // Небольшая задержка, чтобы дать серверу время обработать активацию
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Вызываем API для активации
+        await ActivationService.activate(token);
         
         // Обновляем данные пользователя
         await authStore.checkAuth();
@@ -44,21 +44,20 @@ export const ActivationPage: React.FC = observer(() => {
         }
       } catch (error: any) {
         setStatus('error');
-        setErrorMessage(error?.response?.data?.message || 'Ошибка при активации аккаунта');
+        const errorMsg = error?.response?.data?.message || error?.message || 'Ошибка при активации аккаунта';
+        setErrorMessage(errorMsg);
+        console.error('Activation error:', error);
       }
     };
 
-    checkActivation();
+    activateAccount();
   }, [token, authStore, toast, navigate]);
 
   if (status === 'loading') {
     return (
       <div className={styles.container}>
         <div className={styles.card}>
-          <div className={styles.loadingState}>
-            <div className={styles.loadingSpinner}></div>
-            <p className={styles.loadingText}>Активация аккаунта...</p>
-          </div>
+          <Loader variant="spinner" size="lg" text="Активация аккаунта..." />
         </div>
       </div>
     );

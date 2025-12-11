@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@hooks/useStores';
 import { useToastContext } from '@contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
@@ -12,6 +13,7 @@ interface RegisterFormProps {
 export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToLogin }) => {
   const authStore = useAuthStore();
   const toast = useToastContext();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -44,6 +46,16 @@ export const RegisterForm: React.FC<RegisterFormProps> = observer(({ onSwitchToL
       // Проверяем, что регистрация действительно прошла успешно
       if (authStore.isAuth) {
         toast.success('Регистрация выполнена успешно');
+        // Восстанавливаем сохраненный роут или переходим на главную
+        const lastRoute = sessionStorage.getItem('lastRoute');
+        if (lastRoute && lastRoute !== '/' && 
+            !lastRoute.startsWith('/password/reset') && 
+            !lastRoute.startsWith('/activate')) {
+          navigate(lastRoute, { replace: true });
+          sessionStorage.removeItem('lastRoute');
+        } else {
+          navigate('/', { replace: true });
+        }
       } else {
         // Если isAuth не стал true, значит была ошибка
         toast.error('Ошибка регистрации');

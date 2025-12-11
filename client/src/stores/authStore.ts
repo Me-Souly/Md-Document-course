@@ -5,6 +5,7 @@ import PasswordService from "@service/PasswordService"
 import axios from "axios";
 import { AuthResponse } from "@models/response/AuthResponse";
 import { API_URL } from "@http";
+import { setToken, removeToken } from "@utils/tokenStorage";
 
 export default class authStore {
     user = {} as IUser;
@@ -27,11 +28,11 @@ export default class authStore {
         this.isLoading = bool;
     }
 
-    async login(identifier: string, password: string) {
+    async login(identifier: string, password: string, rememberMe: boolean = false) {
         try {
             const response = await AuthService.login(identifier, password);
             console.log(response);
-            localStorage.setItem('token', response.data.accessToken);
+            setToken(response.data.accessToken, rememberMe);
             this.setAuth(true);
             this.setUser(response.data.user);
         } catch (e) {
@@ -46,11 +47,11 @@ export default class authStore {
         }
     }
 
-    async registration(email: string, username: string, password: string) {
+    async registration(email: string, username: string, password: string, rememberMe: boolean = false) {
         try {
             const response = await AuthService.registration(email, username, password);
             console.log(response);
-            localStorage.setItem('token', response.data.accessToken);
+            setToken(response.data.accessToken, rememberMe);
             this.setAuth(true);
             this.setUser(response.data.user);
         } catch (e) {
@@ -70,7 +71,7 @@ export default class authStore {
         try {
             const response = await AuthService.logout();
             console.log(response);
-            localStorage.removeItem('token');
+            removeToken();
             this.setAuth(false);
             this.setUser({} as IUser);
         } catch (e) {
@@ -85,7 +86,9 @@ export default class authStore {
         this.setLoading(true);
         try {
             const response = await axios.post<AuthResponse>(`${API_URL}/refresh`, {}, {withCredentials: true});
-            localStorage.setItem('token', response.data.accessToken);
+            // При обновлении токена сохраняем в то же хранилище, что и было
+            const rememberMe = localStorage.getItem('rememberMe') === 'true';
+            setToken(response.data.accessToken, rememberMe);
             this.setAuth(true);
             this.setUser(response.data.user);
         } catch (e) {

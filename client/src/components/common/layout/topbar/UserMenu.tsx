@@ -73,7 +73,7 @@ export const UserMenu: React.FC = observer(() => {
             <UserIcon className={styles.iconSmall} />
             <span>Profile</span>
           </button>
-          <button
+          {/* <button
             className={styles.dropdownItem}
             onClick={() => {
               setShowUserMenu(false);
@@ -82,7 +82,7 @@ export const UserMenu: React.FC = observer(() => {
           >
             <UsersIcon className={styles.iconSmall} />
             <span>Settings</span>
-          </button>
+          </button> */}
           <div className={styles.dropdownSeparator} />
           <button
             className={cn(styles.dropdownItem, styles.dropdownItemDanger)}

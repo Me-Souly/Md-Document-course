@@ -7,7 +7,9 @@ import { HomePage } from './HomePage';
 import { ShareModal } from '@components/modals/ShareModal';
 import { ActivationBanner } from '@components/modals/ActivationBanner';
 import { useAuthStore, useSidebarStore } from '@hooks/useStores';
+import { Loader } from '@components/common/ui';
 import $api from '@http';
+import { getToken } from '@utils/tokenStorage';
 import * as styles from './NoteEditorPage.module.css';
 
 interface NoteData {
@@ -39,9 +41,12 @@ export const NoteEditorPage: React.FC = () => {
   const lastPresenceKeyRef = useRef<string>('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
     if (!token) {
-      navigate('/login');
+      // Сохраняем текущий роут перед перенаправлением
+      const currentRoute = window.location.pathname + window.location.search;
+      sessionStorage.setItem('lastRoute', currentRoute);
+      navigate('/');
       return;
     }
 
@@ -99,7 +104,7 @@ export const NoteEditorPage: React.FC = () => {
   }, [noteId, navigate]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
     if (!token) return;
 
     let isCancelled = false;
@@ -179,14 +184,10 @@ export const NoteEditorPage: React.FC = () => {
     };
   }, [noteId]);
 
-  const token = localStorage.getItem('token');
+  const token = getToken();
 
   if (noteId && loading) {
-    return (
-      <div className={styles.loading}>
-        <p>Загрузка заметки...</p>
-      </div>
-    );
+    return <Loader fullScreen variant="spinner" size="lg" text="Загрузка заметки..." />;
   }
 
   // Проверка доступа - если нет permission, не показываем заметку (но только если заметка успешно загружена)
@@ -276,7 +277,7 @@ export const NoteEditorPage: React.FC = () => {
               <NoteViewer
                 noteId={noteId}
                 permission={note.permission as 'edit' | 'read'}
-                getToken={() => localStorage.getItem('token')}
+                getToken={() => getToken()}
                 initialMarkdown={note.rendered || ''}
                 ownerId={note.ownerId}
                 isPublic={note.isPublic}

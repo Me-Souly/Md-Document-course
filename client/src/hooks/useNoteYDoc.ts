@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createNoteConnection } from '@yjs/yjs-connector.js';
+import { getToken as getTokenFromStorage } from '@utils/tokenStorage';
 
 type ConnectionType = {
   doc: any;
@@ -65,7 +66,7 @@ export const useNoteYDoc = ({
       return;
     }
 
-    const token = getToken ? getToken() : localStorage.getItem('token');
+    const token = getToken ? getToken() : getTokenFromStorage();
     if (!token) {
       setIsLoading(false);
       return;
@@ -128,7 +129,7 @@ export const useNoteYDoc = ({
   }, [noteId, getToken, enabled]);
 
   // Запись в Y.Text с минимальным диффом
-  const applyContentToYjs = useCallback((newContent: string, origin?: string) => {
+  const applyContentToYjs = useCallback((newContent: string, origin: string = 'local') => {
     const text = yTextRef.current;
     if (!text) return;
 

@@ -4,7 +4,9 @@ import { useAuthStore } from '@hooks/useStores';
 import ModeratorService from '@service/ModeratorService';
 import type { PublicNoteForModerator } from '@models/response/ModeratorResponse';
 import { Modal } from '@components/common/ui/Modal';
-import { FileTextIcon, SearchIcon, TrashIcon } from '@components/common/ui/icons';
+import { FileTextIcon, SearchIcon } from '@components/common/ui/icons';
+import { Loader } from '@components/common/ui';
+import { ModeratorNoteRow } from './components/ModeratorNoteRow';
 import * as styles from './ModeratorDashboard.module.css';
 
 const ITEMS_PER_PAGE = 10;
@@ -90,11 +92,7 @@ export const ModeratorDashboard: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>Загрузка...</div>
-      </div>
-    );
+    return <Loader fullScreen variant="spinner" size="lg" text="Загрузка..." />;
   }
 
   return (
@@ -168,44 +166,12 @@ export const ModeratorDashboard: React.FC = () => {
                   </tr>
                 ) : (
                   paginatedNotes.map((note) => (
-                    <tr key={note.id} className={styles.tableRow}>
-                      <td className={styles.tableCell}>
-                        <Link
-                          to={`/note/${note.id}`}
-                          className={styles.noteIdLink}
-                        >
-                          {note.id.slice(0, 8)}...
-                        </Link>
-                      </td>
-                      <td className={styles.tableCellTitle}>{note.title}</td>
-                      <td className={styles.tableCell}>
-                        {note.author ? (
-                          <Link
-                            to={`/user/${note.author.login}`}
-                            className={styles.authorLink}
-                          >
-                            @{note.author.login}
-                          </Link>
-                        ) : (
-                          <span className={styles.noAuthor}>Неизвестен</span>
-                        )}
-                      </td>
-                      <td className={styles.tableCellPreview}>
-                        {note.contentPreview.slice(0, 50)}...
-                      </td>
-                      <td className={styles.tableCellDate}>
-                        {formatDate(note.createdAt)}
-                      </td>
-                      <td className={styles.tableCellActions}>
-                        <button
-                          onClick={() => handleDeleteClick(note)}
-                          className={styles.deleteButton}
-                          title="Удалить заметку"
-                        >
-                          <TrashIcon />
-                        </button>
-                      </td>
-                    </tr>
+                    <ModeratorNoteRow
+                      key={note.id}
+                      note={note}
+                      onDelete={handleDeleteClick}
+                      formatDate={formatDate}
+                    />
                   ))
                 )}
               </tbody>

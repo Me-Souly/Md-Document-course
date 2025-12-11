@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 
 export const useYjsTextUpdate = () => {
-  const updateYText = useCallback((markdown: string, origin: string = 'milkdown', yText: any) => {
+  const updateYText = useCallback((markdown: string, origin: string = 'local', yText: any) => {
     if (!yText) return;
     const doc = yText.doc;
     if (!doc) return;

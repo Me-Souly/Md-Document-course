@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createNoteConnection } from '@yjs/yjs-connector.js';
+import { getToken as getTokenFromStorage } from '@utils/tokenStorage';
 
 type ConnectionType = {
   doc: any;
@@ -62,12 +63,12 @@ export const useYjsConnection = ({
       yTextRef.current = text;
       yFragmentRef.current = fragment;
     } else {
-      const token = getToken ? getToken() : localStorage.getItem('token');
+      const token = getToken ? getToken() : getTokenFromStorage();
       if (!token && !readOnly) {
         setError('Token is required for editing');
         return;
       }
-
+      console.log(process.env.REACT_APP_WS_URL);
       connection = createNoteConnection({
         noteId,
         token: token || '',

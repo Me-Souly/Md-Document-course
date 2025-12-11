@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NoteCard } from '@components/notes/NoteCard';
 import { CustomSelect } from '@components/common/ui/CustomSelect';
+import { Loader } from '@components/common/ui';
 import $api from '@http';
 import * as styles from './HomePage.module.css';
 import { GridIcon, ListIcon } from '@components/common/ui/icons';
@@ -155,16 +156,12 @@ export const HomePage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <p>Загрузка заметок…</p>
-      </div>
-    );
+    return <Loader fullScreen variant="spinner" size="lg" text="Загрузка заметок..." />;
   }
 
   if (error) {
     return (
-      <div className={styles.loading}>
+      <div className={styles.error}>
         <p>{error}</p>
       </div>
     );

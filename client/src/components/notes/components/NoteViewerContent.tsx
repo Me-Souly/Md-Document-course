@@ -68,10 +68,11 @@ export const NoteViewerContent: React.FC<NoteViewerContentProps> = ({
                 key={`preview-${noteId}`}
                 noteId={noteId}
                 readOnly={false}
+                // Даем редактировать в превью, но оно пишет прямо в Y.Text как отдельный локальный источник
                 onContentChange={onContentChange}
                 getToken={getToken}
                 sharedConnection={sharedConnection || undefined}
-                expectSharedConnection
+                expectSharedConnection={false}
                 onUndo={onUndo}
                 onRedo={onRedo}
                 initialMarkdown={initialMarkdown}
@@ -96,11 +97,12 @@ export const NoteViewerContent: React.FC<NoteViewerContentProps> = ({
         <MilkdownEditor
           key={`preview-${noteId}`}
           noteId={noteId}
-          readOnly={previewMode === 'preview'}
+          readOnly={false}
+          // Даем редактировать в превью, пишем прямо в Y.Text как отдельный локальный источник
           onContentChange={onContentChange}
           getToken={getToken}
           sharedConnection={sharedConnection || undefined}
-          expectSharedConnection
+          expectSharedConnection={false}
           onUndo={onUndo}
           onRedo={onRedo}
           initialMarkdown={initialMarkdown}

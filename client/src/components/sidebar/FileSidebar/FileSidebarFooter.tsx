@@ -12,12 +12,12 @@ interface FileSidebarFooterProps {
 export const FileSidebarFooter: React.FC<FileSidebarFooterProps> = ({ collapsed, onToggleCollapse }) => {
   return (
     <div className={styles.footer}>
-      {!collapsed && (
+      {/* {!collapsed && (
         <button className={cn(styles.button, styles.buttonGhost, styles.footerButton)}>
           <SettingsIcon className={styles.icon} />
           <span>Settings</span>
         </button>
-      )}
+      )} */}
 
       <button
         className={cn(styles.button, styles.buttonGhost, styles.collapseButton)}

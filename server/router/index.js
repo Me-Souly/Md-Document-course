@@ -22,6 +22,13 @@ import { getNotePresence } from '../yjs/yjs-server.js';
 const router = Router();
 
 //
+//  health check
+//
+router.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+//
 //  auth
 //
 router.post('/login', authController.login);

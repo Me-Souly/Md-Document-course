@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import PasswordService from '@service/PasswordService';
 import { useToastContext } from '@contexts/ToastContext';
 import { EyeIcon, EyeOffIcon, CheckIcon, LockIcon } from '@components/common/ui/icons';
+import { Loader } from '@components/common/ui';
 import * as styles from './ResetPasswordPage.module.css';
 
 export const ResetPasswordPage: React.FC = () => {
@@ -108,10 +109,7 @@ export const ResetPasswordPage: React.FC = () => {
     return (
       <div className={styles.container}>
         <div className={styles.card}>
-          <div className={styles.loadingState}>
-            <div className={styles.loadingSpinner}></div>
-            <p className={styles.loadingText}>Проверка токена...</p>
-          </div>
+          <Loader variant="spinner" size="lg" text="Проверка токена..." />
         </div>
       </div>
     );

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@hooks/useStores';
 import { useToastContext } from '@contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { Button, Input, PasswordInput, Checkbox, FormField, LogInIcon } from '@components/common/ui';
+import { isRememberMe } from '@utils/tokenStorage';
 import * as styles from './Auth.module.css';
 
 interface LoginFormProps {
@@ -14,7 +16,8 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegister, onForgotPassword }) => {
   const authStore = useAuthStore();
   const toast = useToastContext();
-  const [rememberMe, setRememberMe] = useState(false);
+  const navigate = useNavigate();
+  const [rememberMe, setRememberMe] = useState(() => isRememberMe());
   const [loading, setLoading] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -32,10 +35,20 @@ export const LoginForm: React.FC<LoginFormProps> = observer(({ onSwitchToRegiste
 
     setLoading(true);
     try {
-      await authStore.login(formData.emailOrUsername, formData.password);
+      await authStore.login(formData.emailOrUsername, formData.password, rememberMe);
       // Проверяем, что авторизация действительно прошла успешно
       if (authStore.isAuth) {
         toast.success('Вход выполнен успешно');
+        // Восстанавливаем сохраненный роут или переходим на главную
+        const lastRoute = sessionStorage.getItem('lastRoute');
+        if (lastRoute && lastRoute !== '/' && 
+            !lastRoute.startsWith('/password/reset') && 
+            !lastRoute.startsWith('/activate')) {
+          navigate(lastRoute, { replace: true });
+          sessionStorage.removeItem('lastRoute');
+        } else {
+          navigate('/', { replace: true });
+        }
       } else {
         // Если isAuth не стал true, значит была ошибка
         toast.error('Неверный email/username или пароль');

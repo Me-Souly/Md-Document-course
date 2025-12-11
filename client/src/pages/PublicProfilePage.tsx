@@ -5,6 +5,7 @@ import $api from '@http';
 import { useToastContext } from '@contexts/ToastContext';
 import ModeratorService from '@service/ModeratorService';
 import { Modal } from '@components/common/ui/Modal';
+import { Loader } from '@components/common/ui';
 import * as styles from './PublicProfilePage.module.css';
 import { FileTextIcon, GridIcon, ListIcon } from '@components/common/ui/icons';
 import { CustomSelect } from '@components/common/ui/CustomSelect';
@@ -182,13 +183,7 @@ export const PublicProfilePage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.content}>
-          <p>Loading profile…</p>
-        </div>
-      </div>
-    );
+    return <Loader fullScreen variant="spinner" size="lg" text="Загрузка профиля..." />;
   }
 
   if (error || !user) {
