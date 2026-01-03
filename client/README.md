@@ -1,46 +1,302 @@
-# Getting Started with Create React App
+# Note Editor - Frontend Client
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React приложение для веб-редактора заметок с поддержкой markdown и совместного редактирования в реальном времени.
 
-## Available Scripts
+## Технологический стек
 
-In the project directory, you can run:
+- **React 19** с **TypeScript**
+- **MobX** - управление состоянием
+- **Milkdown** - markdown-редактор
+- **Yjs** + **y-websocket** - синхронизация в реальном времени
+- **React Router 7** - маршрутизация
+- **Rspack** - быстрая сборка (альтернатива Webpack)
+- **Axios** - HTTP клиент
+- **CSS Modules** - модульная стилизация
 
-### `npm start`
+## Требования
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Node.js 20+
+- npm или yarn
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Установка и запуск
 
-### `npm test`
+### Локальный запуск
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. **Установите зависимости:**
+```bash
+npm install
+```
 
-### `npm run build`
+2. **Создайте `.env` файл** (опционально):
+```env
+REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_WS_URL=ws://localhost:5000
+REACT_APP_API_PORT=5000
+REACT_APP_WS_PORT=5000
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Если переменные не заданы, приложение автоматически определит API URL на основе текущего хоста.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Запустите приложение в режиме разработки:**
+```bash
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Приложение откроется на http://localhost:3000
 
-### `npm run eject`
+4. **Соберите production версию:**
+```bash
+npm run build
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+Собранные файлы будут в папке `build/`
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Запуск через Docker
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+См. основной README.md в корне проекта для инструкций по Docker Compose.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Структура проекта
 
-## Learn More
+```
+client/
+├── public/              # Статические файлы
+│   ├── index.html
+│   ├── favicon.ico
+│   └── manifest.json
+│
+├── src/
+│   ├── components/      # React компоненты
+│   │   ├── auth/        # Компоненты аутентификации
+│   │   │   ├── Auth.tsx
+│   │   │   ├── LoginForm.tsx
+│   │   │   ├── RegisterForm.tsx
+│   │   │   └── ForgotPasswordModal.tsx
+│   │   │
+│   │   ├── notes/       # Компоненты заметок
+│   │   │   ├── MilkdownEditor.tsx    # Markdown редактор
+│   │   │   ├── NoteViewer.tsx        # Просмотр заметок
+│   │   │   ├── NoteCard.tsx          # Карточка заметки
+│   │   │   ├── SplitEditNote.tsx     # Разделенный режим
+│   │   │   └── hooks/                # Хуки для заметок
+│   │   │       ├── useYjsConnection.ts
+│   │   │       ├── useMarkdownSync.ts
+│   │   │       └── useEditorHistory.ts
+│   │   │
+│   │   ├── sidebar/     # Боковая панель
+│   │   │   ├── FileSidebar.tsx
+│   │   │   └── FileSidebar/
+│   │   │       ├── FileTree.tsx
+│   │   │       ├── TreeNode.tsx
+│   │   │       └── QuickActions.tsx
+│   │   │
+│   │   ├── modals/      # Модальные окна
+│   │   │   ├── ShareModal.tsx
+│   │   │   ├── InviteForm.tsx
+│   │   │   └── LinkSharing.tsx
+│   │   │
+│   │   └── common/      # Общие компоненты
+│   │       ├── layout/  # Компоненты макета
+│   │       │   └── topbar/
+│   │       │       ├── TopBar.tsx
+│   │       │       ├── TopBarSearch.tsx
+│   │       │       └── UserMenu.tsx
+│   │       └── ui/      # UI компоненты
+│   │           ├── Button.tsx
+│   │           ├── Input.tsx
+│   │           ├── Modal.tsx
+│   │           └── Toast.tsx
+│   │
+│   ├── pages/           # Страницы приложения
+│   │   ├── HomePage.tsx           # Главная страница
+│   │   ├── NoteEditorPage.tsx    # Страница редактора
+│   │   ├── ProfilePage.tsx       # Профиль пользователя
+│   │   ├── PublicProfilePage.tsx  # Публичный профиль
+│   │   ├── ModeratorDashboard.tsx # Панель модератора
+│   │   ├── ActivationPage.tsx    # Активация аккаунта
+│   │   └── ResetPasswordPage.tsx  # Сброс пароля
+│   │
+│   ├── stores/          # MobX сторы
+│   │   ├── RootStore.ts
+│   │   ├── authStore.ts
+│   │   ├── notesStore.ts
+│   │   └── sidebarStore.ts
+│   │
+│   ├── service/         # API сервисы
+│   │   ├── AuthService.ts
+│   │   ├── UserService.ts
+│   │   ├── ModeratorService.ts
+│   │   └── ...
+│   │
+│   ├── hooks/           # Кастомные React хуки
+│   │   ├── useStores.ts
+│   │   ├── useNoteYDoc.ts
+│   │   ├── useModal.ts
+│   │   └── useToast.ts
+│   │
+│   ├── http/            # HTTP клиент
+│   │   └── index.ts     # Axios конфигурация с interceptors
+│   │
+│   ├── utils/           # Утилиты
+│   │   ├── tokenStorage.ts
+│   │   └── toastManager.ts
+│   │
+│   ├── contexts/        # React контексты
+│   │   └── ToastContext.tsx
+│   │
+│   ├── models/          # TypeScript модели
+│   │   ├── IUser.ts
+│   │   └── response/
+│   │
+│   ├── types/           # TypeScript типы
+│   │   └── notes.ts
+│   │
+│   ├── yjs/             # Yjs конфигурация
+│   │   └── yjs-connector.js
+│   │
+│   ├── styles/          # Глобальные стили
+│   │   ├── global.css
+│   │   ├── reset.css
+│   │   └── variables.css
+│   │
+│   ├── App.tsx          # Главный компонент
+│   └── index.tsx        # Точка входа
+│
+├── Dockerfile           # Docker конфигурация
+├── nginx.conf          # Nginx конфигурация для production
+├── rspack.config.js    # Конфигурация Rspack
+├── tsconfig.json       # TypeScript конфигурация
+└── package.json
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Основные компоненты
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Редактор заметок
+
+**MilkdownEditor** - основной markdown-редактор:
+- Поддержка markdown синтаксиса
+- Интеграция с Yjs для совместного редактирования
+- История изменений (undo/redo)
+- Автосохранение
+
+**NoteViewer** - компонент просмотра и редактирования:
+- Режимы: только чтение, редактирование, разделенный режим
+- Синхронизация через WebSocket
+- Отображение активных соавторов
+
+### Боковая панель
+
+**FileSidebar** - навигация по заметкам:
+- Дерево файлов и папок
+- Поиск заметок
+- Быстрые действия (создание заметки/папки)
+- Drag & drop для перемещения
+
+### Система доступа
+
+**ShareModal** - управление доступом:
+- Приглашение пользователей
+- Настройка прав (read/edit)
+- Управление публичными ссылками
+- Список соавторов
+
+## Управление состоянием
+
+Приложение использует **MobX** для управления состоянием:
+
+- **authStore** - состояние аутентификации, данные пользователя
+- **notesStore** - кэш заметок, выбранная заметка
+- **sidebarStore** - состояние боковой панели, дерево файлов
+
+## Маршрутизация
+
+Приложение использует **React Router**:
+
+- `/` - главная страница / форма входа
+- `/note/:noteId` - редактирование заметки
+- `/profile` - профиль пользователя
+- `/user/:userId` - публичный профиль
+- `/moderator` - панель модератора
+- `/activate/:token` - активация аккаунта
+- `/password/reset/:token` - сброс пароля
+
+## API интеграция
+
+HTTP клиент настроен через **Axios**:
+
+- Автоматическое добавление JWT токена в заголовки
+- Автоматическое обновление токена при истечении
+- Централизованная обработка ошибок
+- Toast уведомления для ошибок
+
+## Совместное редактирование
+
+Приложение использует **Yjs** для синхронизации в реальном времени:
+
+- WebSocket соединение для каждого открытого документа
+- Автоматическая синхронизация изменений
+- Отображение активных пользователей
+- Конфликт-фри синхронизация через CRDT
+
+## Основные функции
+
+### Редактор
+- Markdown форматирование
+- Автосохранение
+- История изменений
+- Совместное редактирование
+- Подсчет слов
+
+### Управление заметками
+- Создание, редактирование, удаление
+- Организация в папки
+- Поиск по содержимому
+- Избранное
+- Публичные заметки
+
+### Доступ
+- Приглашение пользователей
+- Публичные ссылки
+- Права доступа (read/edit)
+- Модерация контента
+
+## Стилизация
+
+- **CSS Modules** - модульная стилизация компонентов
+- **CSS Variables** - глобальные переменные для тем
+- **Responsive Design** - адаптивная верстка
+
+## Production сборка
+
+### Docker
+
+Приложение собирается в multi-stage Docker образ:
+1. **Builder stage** - сборка React приложения через Rspack
+2. **Production stage** - Nginx для раздачи статики
+
+### Nginx конфигурация
+
+- SPA роутинг (все запросы на index.html)
+- Gzip сжатие
+- Кэширование статических файлов
+- Security headers
+
+## Скрипты
+
+- `npm start` - запуск dev сервера (Rspack)
+- `npm run build` - production сборка
+- `npm test` - запуск тестов
+
+## Безопасность
+
+- JWT токены хранятся в localStorage/sessionStorage
+- Refresh токены в httpOnly cookies
+- Автоматическое обновление токенов
+- Защищенные роуты через ProtectedRoute
+- Валидация форм на клиенте
+
+## Дополнительная документация
+
+- Основной README: `../README.md`
+- Backend README: `../server/README.md`
+- Docker настройка: `../DOCKER-SETUP.md`
+
