@@ -2,6 +2,7 @@ import axios from 'axios';
 import { AuthResponse } from '@models/response/AuthResponse';
 import { toastManager } from '@utils/toastManager';
 import { getToken, setToken } from '@utils/tokenStorage';
+import { getCsrfToken, fetchCsrfToken, requiresCsrfProtection } from '@utils/csrfToken';
 
 const resolveApiUrl = () => {
     if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
@@ -21,11 +22,31 @@ const $api = axios.create({
     baseURL: API_URL,
 })
 
-$api.interceptors.request.use((config) => {
+$api.interceptors.request.use(async (config) => {
+    // Add JWT access token
     const token = getToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add CSRF token for state-changing requests
+    const method = config.method || 'GET';
+    if (requiresCsrfProtection(method)) {
+        let csrfToken = getCsrfToken();
+
+        // Если токен отсутствует, попробуем загрузить его
+        if (!csrfToken) {
+            console.log('[HTTP] CSRF token missing, fetching...');
+            csrfToken = await fetchCsrfToken(API_URL);
+        }
+
+        if (csrfToken) {
+            config.headers['x-csrf-token'] = csrfToken;
+        } else {
+            console.warn('[HTTP] CSRF token still missing after fetch attempt');
+        }
+    }
+
     return config;
 })
 
@@ -38,7 +59,21 @@ $api.interceptors.response.use((config) => {
     if (error.response?.status === 401 && error.config && !error.config._isRetry) {
         originalRequest._isRetry = true;
         try {
-            const response = await axios.post<AuthResponse>(`${API_URL}/refresh`, {withCredentials: true}); 
+            // Include CSRF token in refresh request
+            const csrfToken = getCsrfToken();
+            const headers: Record<string, string> = {};
+            if (csrfToken) {
+                headers['x-csrf-token'] = csrfToken;
+            }
+
+            const response = await axios.post<AuthResponse>(
+                `${API_URL}/refresh`,
+                {},
+                {
+                    withCredentials: true,
+                    headers
+                }
+            );
             // При обновлении токена сохраняем в то же хранилище, что и было
             const rememberMe = localStorage.getItem('rememberMe') === 'true';
             setToken(response.data.accessToken, rememberMe);

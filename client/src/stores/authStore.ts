@@ -1,4 +1,4 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 import { IUser } from "@models/IUser";
 import AuthService from "@service/AuthService";
 import PasswordService from "@service/PasswordService"
@@ -6,6 +6,7 @@ import axios from "axios";
 import { AuthResponse } from "@models/response/AuthResponse";
 import { API_URL } from "@http";
 import { setToken, removeToken } from "@utils/tokenStorage";
+import { getCsrfToken, clearCsrfToken, fetchCsrfToken } from "@utils/csrfToken";
 
 export default class authStore {
     user = {} as IUser;
@@ -33,8 +34,11 @@ export default class authStore {
             const response = await AuthService.login(identifier, password);
             console.log(response);
             setToken(response.data.accessToken, rememberMe);
-            this.setAuth(true);
-            this.setUser(response.data.user);
+            // Обновления observable состояния обернуты в runInAction
+            runInAction(() => {
+                this.setAuth(true);
+                this.setUser(response.data.user);
+            });
         } catch (e) {
             // Пробрасываем ошибку дальше, чтобы компонент мог её обработать
             if (axios.isAxiosError(e)) {
@@ -52,8 +56,11 @@ export default class authStore {
             const response = await AuthService.registration(email, username, password);
             console.log(response);
             setToken(response.data.accessToken, rememberMe);
-            this.setAuth(true);
-            this.setUser(response.data.user);
+            // Обновления observable состояния обернуты в runInAction
+            runInAction(() => {
+                this.setAuth(true);
+                this.setUser(response.data.user);
+            });
         } catch (e) {
             // Пробрасываем ошибку дальше, чтобы компонент мог её обработать
             console.log(e);
@@ -72,8 +79,14 @@ export default class authStore {
             const response = await AuthService.logout();
             console.log(response);
             removeToken();
-            this.setAuth(false);
-            this.setUser({} as IUser);
+            clearCsrfToken(); // Clear CSRF token on logout
+            // Обновления observable состояния обернуты в runInAction
+            runInAction(() => {
+                this.setAuth(false);
+                this.setUser({} as IUser);
+            });
+            // Fetch new CSRF token for the next login
+            await fetchCsrfToken(API_URL);
         } catch (e) {
             if (axios.isAxiosError(e))
                 console.log(e.response?.data?.message);
@@ -85,19 +98,39 @@ export default class authStore {
     async checkAuth() {
         this.setLoading(true);
         try {
-            const response = await axios.post<AuthResponse>(`${API_URL}/refresh`, {}, {withCredentials: true});
+            // Include CSRF token in refresh request
+            const csrfToken = getCsrfToken();
+            const headers: Record<string, string> = {};
+            if (csrfToken) {
+                headers['x-csrf-token'] = csrfToken;
+            }
+
+            const response = await axios.post<AuthResponse>(
+                `${API_URL}/refresh`,
+                {},
+                {
+                    withCredentials: true,
+                    headers
+                }
+            );
             // При обновлении токена сохраняем в то же хранилище, что и было
             const rememberMe = localStorage.getItem('rememberMe') === 'true';
             setToken(response.data.accessToken, rememberMe);
-            this.setAuth(true);
-            this.setUser(response.data.user);
+            // Обновления observable состояния обернуты в runInAction
+            runInAction(() => {
+                this.setAuth(true);
+                this.setUser(response.data.user);
+            });
         } catch (e) {
             if (axios.isAxiosError(e))
                 console.log(e.response?.data?.message);
             else
                 console.log(e);
         } finally {
-            this.setLoading(false);
+            // Обновления observable состояния обернуты в runInAction
+            runInAction(() => {
+                this.setLoading(false);
+            });
         }
     }
 

@@ -12,6 +12,8 @@ import { ModeratorDashboard } from './pages/ModeratorDashboard';
 import { ToastProvider } from './contexts/ToastContext';
 import { Loader } from './components/common/ui';
 import { getToken } from './utils/tokenStorage';
+import { fetchCsrfToken } from './utils/csrfToken';
+import { API_URL } from './http';
 
 // Компонент для защиты роутов
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = observer(({ children }) => {
@@ -59,16 +61,21 @@ function App() {
   const [isInitialized, setIsInitialized] = React.useState(false);
   
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      // Вызываем checkAuth и ждем его завершения
-      authStore.checkAuth().finally(() => {
-        setIsInitialized(true);
-      });
-    } else {
-      // Если токена нет, сразу помечаем как инициализированное
+    const initialize = async () => {
+      // Fetch CSRF token first (needed for all state-changing requests)
+      await fetchCsrfToken(API_URL);
+
+      // Then check authentication
+      const token = getToken();
+      if (token) {
+        // Вызываем checkAuth и ждем его завершения
+        await authStore.checkAuth();
+      }
+
       setIsInitialized(true);
-    }
+    };
+
+    initialize();
   }, [authStore])
 
   // Показываем загрузку, пока идет инициализация

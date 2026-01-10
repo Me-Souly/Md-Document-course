@@ -4,7 +4,14 @@ import {
     authMiddleware,
     moderatorMiddleware,
     activatedMiddleware,
-    checkUserActive
+    checkUserActive,
+    csrfTokenGenerator,
+    csrfProtection,
+    authLimiter,
+    registrationLimiter,
+    passwordResetLimiter,
+    generalLimiter,
+    createContentLimiter
 } from '../middlewares/index.js';
 
 import {
@@ -21,6 +28,9 @@ import { getNotePresence } from '../yjs/yjs-server.js';
 
 const router = Router();
 
+// Применяем общий rate limiter ко всем запросам
+router.use(generalLimiter);
+
 //
 //  health check
 //
@@ -29,11 +39,18 @@ router.get('/health', (req, res) => {
 });
 
 //
+//  CSRF token generation
+//
+router.get('/csrf-token', csrfTokenGenerator, (req, res) => {
+    res.json({ csrfToken: req.csrfToken });
+});
+
+//
 //  auth
 //
-router.post('/login', authController.login);
-router.post('/logout', authController.logout);
-router.post('/refresh', authController.refresh);
+router.post('/login', authLimiter, csrfProtection, authController.login);
+router.post('/logout', csrfProtection, authController.logout);
+router.post('/refresh', csrfProtection, authController.refresh);
 
 //
 //  activation
@@ -47,7 +64,8 @@ router.post('/activation/resend',
 //
 //  user control
 //
-router.post('/users/registration', 
+router.post('/users/registration',
+    registrationLimiter,
     body('email', 'Email is incorrect').isEmail(),
     body('username', 'Minimal username length is 2').isLength({min: 2}),
     body('password', 'Password length should be between 3 and 32').isLength({min: 3, max: 32}),
@@ -73,19 +91,20 @@ router.delete('/users/me',
     userController.deleteUser);
 
 //
-//  password 
+//  password
 //
 router.post("/password/change",
     authMiddleware,
     checkUserActive,
     passwordController.changePassword);
 
-router.post('/password/request-reset', 
+router.post('/password/request-reset',
+    passwordResetLimiter,
     body('email', 'Email is incorrect').isEmail(),
     passwordController.requestReset);
 
 router.get('/password/reset/:token', passwordController.validateReset);
-router.post('/password/reset', passwordController.resetPassword);
+router.post('/password/reset', passwordResetLimiter, passwordController.resetPassword);
 
 //
 //  folders
@@ -98,7 +117,8 @@ router.get('/folders/:id',
     authMiddleware,
     checkUserActive,
     folderController.getById);
-router.post('/folders', 
+router.post('/folders',
+    createContentLimiter,
     authMiddleware,
     checkUserActive,
     activatedMiddleware,
@@ -130,8 +150,9 @@ router.get('/notes/:id',
     authMiddleware, 
     checkUserActive, 
     noteController.getById);
-router.post('/notes', 
-    authMiddleware, 
+router.post('/notes',
+    createContentLimiter,
+    authMiddleware,
     checkUserActive,
     activatedMiddleware,
     noteController.create);
@@ -230,6 +251,7 @@ router.get('/notes/:noteId/comments',
     commentController.getByNote);
 
 router.post('/notes/:noteId/comments',
+    createContentLimiter,
     authMiddleware,
     checkUserActive,
     activatedMiddleware,
