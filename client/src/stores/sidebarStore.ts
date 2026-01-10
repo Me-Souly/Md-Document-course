@@ -359,7 +359,8 @@ class sidebarStore {
     }
 
     const query = this.searchQuery.toLowerCase();
-    return this.filterTree(this.fileTree, query);
+    // Используем tree вместо this.fileTree для корректной фильтрации
+    return this.filterTree(tree, query);
   }
 
   private filterTree(nodes: FileTreeNode[], query: string): FileTreeNode[] {

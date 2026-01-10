@@ -150,3 +150,9 @@ docker-compose.override.yml
 
 # Windows
 Thumbs.db
+
+# Claude Code / AI assistant files
+CLAUDE.md
+.claude/
+DIPLOMA-ROADMAP.md
+MICROSERVICES-GUIDE.md
