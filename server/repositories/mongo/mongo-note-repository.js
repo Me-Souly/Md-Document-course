@@ -7,6 +7,8 @@ class MongoNoteRepository extends NoteRepository {
     constructor() {
         super();
         this.mongo = new MongoBaseRepository(NoteModel);
+        // Экспортируем model для атомарных операций в сервисах
+        this.model = NoteModel;
     }
 
     async findOneBy(filter) { return this.mongo.findOneBy(filter); }

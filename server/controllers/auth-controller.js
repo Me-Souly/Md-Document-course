@@ -17,7 +17,12 @@ class AuthController {
             console.log('[AuthController] Calling authService.login...');
             const userData = await authService.login(identifier, password);
             console.log('[AuthController] Login successful, user:', userData.user?.email || userData.user?.login);
-            res.cookie('refreshToken', userData.refreshToken, { maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000, httpOnly: true });
+            res.cookie('refreshToken', userData.refreshToken, {
+                maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict'
+            });
             return res.json(userData);
         } catch (e) {
             console.log('[AuthController] Login error:', e.message);
@@ -42,11 +47,16 @@ class AuthController {
         try {
             const { refreshToken } = req.cookies;
             const userData = await authService.refresh(refreshToken);
-            res.cookie('refreshToken', userData.refreshToken, {maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000, httpOnly: true})
+            res.cookie('refreshToken', userData.refreshToken, {
+                maxAge: parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS) * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict'
+            });
             return res.json(userData);
         } catch (e) {
             next(e);
-        }   
+        }
     }
 }
 

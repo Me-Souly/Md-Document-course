@@ -23,11 +23,6 @@ class NoteAccessService {
             throw ApiError.BadRequest('Invalid permission. Must be "read" or "edit"');
         }
 
-        // Проверяем, есть ли уже доступ у этого пользователя
-        const existingAccessIndex = note.access.findIndex(
-            a => a.userId.toString() === userId.toString()
-        );
-
         const accessEntry = {
             userId,
             permission,
@@ -35,17 +30,32 @@ class NoteAccessService {
             createdAt: new Date()
         };
 
-        if (existingAccessIndex >= 0) {
-            // Обновляем существующий доступ
-            note.access[existingAccessIndex] = accessEntry;
-        } else {
-            // Добавляем новый доступ
-            note.access.push(accessEntry);
+        // Используем атомарные операторы MongoDB
+        // Сначала пытаемся обновить существующий элемент
+        const updatedNote = await noteRepository.model.findOneAndUpdate(
+            {
+                _id: noteId,
+                'access.userId': userId
+            },
+            {
+                $set: { 'access.$': accessEntry }
+            },
+            { new: true }
+        );
+
+        // Если не обновилось (элемента нет), добавляем новый
+        if (!updatedNote) {
+            await noteRepository.model.findByIdAndUpdate(
+                noteId,
+                {
+                    $push: { access: accessEntry }
+                },
+                { new: true }
+            );
         }
 
-        await noteRepository.updateByIdAtomic(noteId, { access: note.access });
-        const noteData = await noteRepository.findById(noteId); 
-        return new NoteDto(noteData);
+        const noteData = await noteRepository.findById(noteId);
+        return new NoteDto(noteData, grantedBy);
     }
 
     /**
@@ -75,13 +85,17 @@ class NoteAccessService {
             throw ApiError.ForbiddenError('Only owner can modify access');
         }
 
-        const filtered = note.access.filter(
-            a => a.userId.toString() !== userId.toString()
+        // Используем атомарный оператор $pull
+        await noteRepository.model.findByIdAndUpdate(
+            noteId,
+            {
+                $pull: { access: { userId: userId } }
+            },
+            { new: true }
         );
 
-        await noteRepository.updateByIdAtomic(noteId, { access: filtered });
         const noteData = await noteRepository.findById(noteId);
-        return new NoteDto(noteData);
+        return new NoteDto(noteData, grantedBy);
     }
 
     /**

@@ -8,7 +8,14 @@ class NoteService {
     async getById(noteId, userId) {
         const note = await noteRepository.findById(noteId);
         if (!note) throw ApiError.NotFoundError("Note not found");
-        return new NoteDto(note, userId);
+
+        // Проверка прав доступа
+        const dto = new NoteDto(note, userId);
+        if (!dto.canRead) {
+            throw ApiError.ForbiddenError("Access denied");
+        }
+
+        return dto;
     }
 
     async create(userId, noteData) {
@@ -100,11 +107,21 @@ class NoteService {
             folderId,
             isDeleted: false
         });
-        return notes.map(note => new NoteDto(note, userId));
+
+        // Фильтруем заметки по правам доступа
+        const accessibleNotes = notes.filter(note => {
+            const dto = new NoteDto(note, userId);
+            return dto.canRead;
+        });
+
+        return accessibleNotes.map(note => new NoteDto(note, userId));
     }
 
     async getAllPublicNotes(userId = null) {
-        const notes = await noteRepository.findBy({ isPublic: true });
+        const notes = await noteRepository.findBy({
+            isPublic: true,
+            isDeleted: false  // Не показываем удалённые публичные заметки
+        });
         return notes.map(note => new NoteDto(note, userId));
     }
 
