@@ -42,18 +42,35 @@ export function createNoteConnection({ noteId, token, wsUrl }) {
     const fragment = doc.getXmlFragment("prosemirror");
     console.log(`[yjs-connector] Создание соединения для заметки ${noteId}`);
 
-    // Логируем события provider
-    if (provider && typeof provider.on === 'function') {
-        provider.on('status', (event) => {
+    // Сохраняем ссылки на handlers для корректной отписки
+    // Debounce для логирования, чтобы не спамить консоль при множественных sync событиях
+    let lastStatusLog = 0;
+    let lastSyncLog = 0;
+    const LOG_DEBOUNCE = 500; // мс
+
+    const statusHandler = (event) => {
+        const now = Date.now();
+        if (now - lastStatusLog > LOG_DEBOUNCE) {
             console.log(`[yjs-connector] Provider status: ${event.status}`);
-        });
-        provider.on('sync', (isSynced) => {
+            lastStatusLog = now;
+        }
+    };
+    const syncHandler = (isSynced) => {
+        const now = Date.now();
+        if (now - lastSyncLog > LOG_DEBOUNCE) {
             console.log(`[yjs-connector] Provider sync: ${isSynced}`);
             if (isSynced) {
                 const syncedText = text.toString();
                 console.log(`[yjs-connector] Текст после sync: длина = ${syncedText.length}, первые 50 символов: "${syncedText.substring(0, 50)}"`);
             }
-        });
+            lastSyncLog = now;
+        }
+    };
+
+    // Логируем события provider
+    if (provider && typeof provider.on === 'function') {
+        provider.on('status', statusHandler);
+        provider.on('sync', syncHandler);
     }
 
     return {
@@ -63,7 +80,13 @@ export function createNoteConnection({ noteId, token, wsUrl }) {
         fragment,
         destroy() {
             console.log(`[yjs-connector] Уничтожение соединения для заметки ${noteId}`);
+
+            // Отписываемся от событий перед уничтожением
             if (provider) {
+                if (typeof provider.off === 'function') {
+                    provider.off('status', statusHandler);
+                    provider.off('sync', syncHandler);
+                }
                 provider.disconnect();
                 if (typeof provider.destroy === 'function') {
                     provider.destroy();

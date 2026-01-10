@@ -24,6 +24,10 @@ const presenceByNote = new Map();
 // ws -> { noteId, userId }
 const connectionPresence = new WeakMap();
 
+// docName -> timeout ID для отложенного уничтожения
+const docCleanupTimers = new Map();
+const DOC_CLEANUP_DELAY = 5 * 60 * 1000; // 5 минут неактивности
+
 const toUint8Array = (message) => {
   if (message instanceof Uint8Array) return message;
   if (Array.isArray(message)) return Uint8Array.from(message);
@@ -148,9 +152,16 @@ export const setupYjs = (server) => {
 
       const docName = `yjs/${noteId}`;
 
+      // Отменяем таймер уничтожения при новом подключении
+      if (docCleanupTimers.has(docName)) {
+        console.log(`[YJS] Отмена таймера уничтожения для ${docName} (новое подключение)`);
+        clearTimeout(docCleanupTimers.get(docName));
+        docCleanupTimers.delete(docName);
+      }
+
       // Регистрируем presence для этой WS-сессии
       registerPresence(noteId, userId, ws);
-      
+
       // Получаем или создаем документ
       const sharedDoc = getYDoc(docName);
       const docState = getDocState(docName, sharedDoc);
@@ -162,7 +173,7 @@ export const setupYjs = (server) => {
       // Загружаем состояние из БД, если документ пустой (даже если уже был загружен ранее)
       // Это нужно, т.к. документ может быть уничтожен после отключения всех клиентов
       let stateLoaded = false;
-      if (currentContent.length === 0) {
+      if (!docState.isDbStateLoaded && currentContent.length === 0) {
         console.log(`[YJS] Документ ${docName} пустой, загрузка состояния...`);
         
         // СНАЧАЛА проверяем Redis кэш (быстро)
@@ -358,6 +369,7 @@ export const setupYjs = (server) => {
                 }
               }
             }
+        docState.isDbStateLoaded = true;
       } else {
         console.log(`[YJS] Документ ${docName} уже содержит данные (${currentContent.length} символов), пропуск загрузки из БД`);
         stateLoaded = true; // Документ уже содержит данные
@@ -383,46 +395,76 @@ export const setupYjs = (server) => {
       // НО ТОЛЬКО ПОСЛЕ того, как состояние из БД применено
       if (!docState.isUpdateHandlerAttached) {
         console.log(`[YJS] Регистрация обработчика update для документа ${docName}`);
-        
+
         const SAVE_DEBOUNCE_MS = 2000;
+        const MAX_RETRIES = 3;
         // Debounce для сохранения - сохраняем не чаще чем раз в SAVE_DEBOUNCE_MS
-        let saveTimeout = null;
+        docState.saveTimeout = null;
+        docState.isSaving = false;
+        docState.retryCount = 0;
         const debouncedSave = async () => {
-          if (saveTimeout) {
-            clearTimeout(saveTimeout);
+          if (docState.saveTimeout) {
+            clearTimeout(docState.saveTimeout);
           }
-          saveTimeout = setTimeout(async () => {
+          docState.saveTimeout = setTimeout(async () => {
+            docState.saveTimeout = null;
             await saveDocState();
           }, SAVE_DEBOUNCE_MS);
         };
         
         const saveDocState = async () => {
+          if (docState.isSaving) {
+            console.log(`[YJS] Сохранение уже в процессе, пропускаем`);
+            return;
+          }
+
+          docState.isSaving = true;
+
           try {
             const currentText = sharedDoc.getText("content").toString();
-            if (currentText.length === 0) {
-              return; // Не сохраняем пустое состояние
-            }
-            
-            // Кодируем текущее состояние (note-service.js создаст snapshot если нужно)
+
+            // if (currentText.length === 0) return;
+
             const state = Y.encodeStateAsUpdate(sharedDoc);
-            
-            // Проверяем, что состояние корректно
+
+            // Проверяем корректность состояния
             const testDoc = new Y.Doc();
             Y.applyUpdate(testDoc, state);
             const testText = testDoc.getText("content").toString();
-            
-            if (testText.length === 0) {
-              console.log(`[YJS] ⚠ Пропуск сохранения: в закодированном состоянии нет текста`);
-              return;
+
+            if (testText.length === 0 && currentText.length === 0) {
+              console.log(`[YJS] Сохранение пустого состояния (пользователь удалил весь текст)`);
             }
-            
-            // note-service.js автоматически создаст snapshot если размер превышает порог
+
             await noteService.saveYDocState(noteId, state);
-            // Обновляем Redis кэш
             await redisService.setYjsState(noteId, state);
             console.log(`[YJS] ✓ Сохранено в БД и Redis для заметки ${noteId}, размер: ${state.length} байт, текст: ${testText.length} символов`);
+
+            // Сброс счётчика retry при успехе
+            docState.retryCount = 0;
+
           } catch (err) {
-            console.error(`[YJS] ✗ Ошибка сохранения в БД:`, err.message);
+            console.error(`[YJS] Ошибка сохранения (попытка ${docState.retryCount + 1}/${MAX_RETRIES}):`, err.message);
+
+            if (docState.retryCount < MAX_RETRIES) {
+              docState.retryCount++;
+              const delay = Math.pow(2, docState.retryCount) * 1000; // 2s, 4s, 8s
+              console.log(`[YJS] Повтор сохранения через ${delay}ms...`);
+
+              setTimeout(async () => {
+                docState.isSaving = false;
+                await saveDocState();
+              }, delay);
+              return;
+            } else {
+              console.error(`[YJS] КРИТИЧНО: Не удалось сохранить после ${MAX_RETRIES} попыток!`);
+              // TODO: Сохранить в таблицу failed_saves для восстановления
+            }
+          } finally {
+            // Сбрасываем флаг только если не планируем retry
+            if (docState.retryCount >= MAX_RETRIES || docState.retryCount === 0) {
+              docState.isSaving = false;
+            }
           }
         };
         
@@ -455,13 +497,7 @@ export const setupYjs = (server) => {
                 console.log(`[YJS]   ${key} (${type}): длина = ${text.length}`);
               }
             });
-            
-            // НЕ сохраняем, если текст пустой
-            if (currentText.length === 0) {
-              console.log(`[YJS] ⚠ Пропуск сохранения: текст пустой`);
-              return;
-            }
-            
+
             const state = Y.encodeStateAsUpdate(sharedDoc);
             console.log(`[YJS] Закодировано состояние, размер: ${state.length} байт`);
             
@@ -494,18 +530,19 @@ export const setupYjs = (server) => {
         };
         
         // Сохраняем состояние при отключении всех клиентов
-        const checkAndSaveOnDisconnect = () => {
-          // Проверяем количество подключений
-          const activeConnections = sharedDoc.conns?.size || 0;
+        const checkAndSaveOnDisconnect = async () => {
+          const activeConnections = wss.clients.size;
           console.log(`[YJS] Проверка подключений для ${docName}: ${activeConnections} активных`);
-          
-          // Если это последнее подключение, сохраняем немедленно
+
           if (activeConnections <= 1) {
             console.log(`[YJS] Последнее подключение закрывается, сохраняем состояние немедленно...`);
-            if (saveTimeout) {
-              clearTimeout(saveTimeout);
+
+            if (docState.saveTimeout) {
+              clearTimeout(docState.saveTimeout);
+              docState.saveTimeout = null;
             }
-            saveDocState();
+
+            await saveDocState();
           }
         };
         
@@ -722,14 +759,75 @@ export const setupYjs = (server) => {
         unregisterPresence(ws);
         const activeConnections = sharedDoc.conns?.size || 0;
         console.log(`[YJS] Активных подключений осталось: ${activeConnections}`);
-        
+
         // Если это было последнее подключение, сохраняем состояние немедленно
-        if (activeConnections === 0 && docState.saveDocState) {
-          console.log(`[YJS] Последнее подключение закрыто, сохраняем состояние...`);
-          // Небольшая задержка, чтобы убедиться, что все обновления применены
-          setTimeout(() => {
-            docState.saveDocState();
-          }, 100);
+        if (activeConnections === 0) {
+          if (docState.saveDocState) {
+            console.log(`[YJS] Последнее подключение закрыто, сохраняем состояние...`);
+            // Небольшая задержка, чтобы убедиться, что все обновления применены
+            setTimeout(() => {
+              docState.saveDocState();
+            }, 100);
+          }
+
+          // Очищаем update handler при отключении последнего клиента
+          // Это предотвращает утечку памяти при накоплении handlers
+          if (docState.updateHandler && docState.isUpdateHandlerAttached) {
+            console.log(`[YJS] Удаление update handler для документа ${docName} (последнее подключение)`);
+
+            // Отписываемся от событий update
+            sharedDoc.off("update", docState.updateHandler);
+            docState.isUpdateHandlerAttached = false;
+            docState.updateHandler = null;
+
+            // Очищаем таймауты
+            if (docState.saveTimeout) {
+              clearTimeout(docState.saveTimeout);
+              docState.saveTimeout = null;
+            }
+
+            console.log(`[YJS] Update handler удален для документа ${docName}`);
+          }
+
+          // Запускаем таймер уничтожения Y.Doc после периода неактивности
+          // Это освобождает память для документов, к которым никто не подключается
+          console.log(`[YJS] Запуск таймера уничтожения для ${docName} (${DOC_CLEANUP_DELAY / 1000 / 60} минут)`);
+          const cleanupTimer = setTimeout(() => {
+            console.log(`[YJS] Таймер сработал: уничтожение Y.Doc для ${docName}`);
+
+            // Проверяем, что действительно нет активных подключений
+            const finalCheck = sharedDoc.conns?.size || 0;
+            if (finalCheck === 0) {
+              console.log(`[YJS] Уничтожение Y.Doc для ${docName} (нет подключений ${DOC_CLEANUP_DELAY / 1000 / 60} минут)`);
+
+              // Удаляем handler (если ещё не удалён)
+              if (docState.updateHandler) {
+                sharedDoc.off("update", docState.updateHandler);
+                docState.updateHandler = null;
+              }
+
+              // Очищаем все таймауты
+              if (docState.saveTimeout) {
+                clearTimeout(docState.saveTimeout);
+                docState.saveTimeout = null;
+              }
+
+              // Уничтожаем Y.Doc (если есть метод destroy)
+              if (typeof sharedDoc.destroy === 'function') {
+                sharedDoc.destroy();
+                console.log(`[YJS] Y.Doc уничтожен для ${docName}`);
+              }
+
+              // Удаляем из docStateMap (WeakMap автоматически очистится)
+              // Удаляем таймер из Map
+              docCleanupTimers.delete(docName);
+            } else {
+              console.log(`[YJS] Отмена уничтожения ${docName}: появились новые подключения (${finalCheck})`);
+              docCleanupTimers.delete(docName);
+            }
+          }, DOC_CLEANUP_DELAY);
+
+          docCleanupTimers.set(docName, cleanupTimer);
         } else if (docState.checkAndSaveOnDisconnect) {
           // Проверяем и сохраняем через debounce
           docState.checkAndSaveOnDisconnect();
