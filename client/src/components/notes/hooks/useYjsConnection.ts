@@ -38,6 +38,14 @@ export const useYjsConnection = ({
   const yTextRef = useRef<any>(null);
   const yFragmentRef = useRef<any>(null);
 
+  // Стабилизируем функцию getToken с помощью useRef
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+
+  // initialMarkdown должна применяться только один раз
+  const initialMarkdownRef = useRef(initialMarkdown);
+  const initialMarkdownApplied = useRef(false);
+
   useEffect(() => {
     let isMounted = true;
     setError(null);
@@ -63,7 +71,8 @@ export const useYjsConnection = ({
       yTextRef.current = text;
       yFragmentRef.current = fragment;
     } else {
-      const token = getToken ? getToken() : getTokenFromStorage();
+      // Используем getTokenRef.current для стабильности
+      const token = getTokenRef.current ? getTokenRef.current() : getTokenFromStorage();
       if (!token && !readOnly) {
         setError('Token is required for editing');
         return;
@@ -83,10 +92,11 @@ export const useYjsConnection = ({
       shouldDestroyConnection = true;
     }
 
-    // Если Y.Text пуст и есть initialMarkdown — запишем его один раз
-    if (initialMarkdown && yTextRef.current && yTextRef.current.length === 0) {
+    // Применяем initialMarkdown только один раз
+    if (!initialMarkdownApplied.current && initialMarkdownRef.current && yTextRef.current && yTextRef.current.length === 0) {
       try {
-        yTextRef.current.insert(0, initialMarkdown);
+        yTextRef.current.insert(0, initialMarkdownRef.current);
+        initialMarkdownApplied.current = true;
       } catch (e) {
         console.error('[useYjsConnection] Failed to set initialMarkdown into Y.Text', e);
       }
@@ -127,7 +137,10 @@ export const useYjsConnection = ({
         connectionRef.current = null;
       }
     };
-  }, [noteId, readOnly, getToken, sharedConnection, initialMarkdown, expectSharedConnection]);
+    // Убрали getToken, initialMarkdown, sharedConnection из зависимостей
+    // чтобы избежать бесконечных переподключений. Используем useRef для стабильности.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId, readOnly, expectSharedConnection]);
 
   return {
     connection: connectionRef.current,

@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, runInAction } from 'mobx';
 import RootStore from './RootStore';
 import type { Note } from '@app-types/notes';
 
@@ -75,11 +75,20 @@ class notesStore {
     try {
       // Здесь будет запрос к API
       // const response = await NoteService.fetchNotes();
-      // this.setNotes(response.data);
+      // Обновления observable состояния обернуты в runInAction
+      // runInAction(() => {
+      //   this.setNotes(response.data);
+      // });
     } catch (error) {
-      this.setError('Ошибка загрузки заметок');
+      // Обновления observable состояния обернуты в runInAction
+      runInAction(() => {
+        this.setError('Ошибка загрузки заметок');
+      });
     } finally {
-      this.setLoading(false);
+      // Обновления observable состояния обернуты в runInAction
+      runInAction(() => {
+        this.setLoading(false);
+      });
     }
   }
 
@@ -87,9 +96,15 @@ class notesStore {
     try {
       // Здесь будет запрос к API
       // await NoteService.updateNote(noteId, content);
-      this.updateNote(noteId, { content, updatedAt: new Date().toISOString() });
+      // Обновления observable состояния обернуты в runInAction
+      runInAction(() => {
+        this.updateNote(noteId, { content, updatedAt: new Date().toISOString() });
+      });
     } catch (error) {
-      this.setError('Ошибка сохранения заметки');
+      // Обновления observable состояния обернуты в runInAction
+      runInAction(() => {
+        this.setError('Ошибка сохранения заметки');
+      });
     }
   }
 }

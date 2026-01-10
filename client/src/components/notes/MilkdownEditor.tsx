@@ -55,6 +55,22 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
   const editorRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<((event: any) => void) | null>(null);
+  const listenerRegisteredRef = useRef(false);
+
+  // Refs для актуальных значений (чтобы listener не перерегистрировался при изменениях)
+  const onContentChangeRef = useRef(onContentChange);
+  const yTextRef = useRef<any>(null);
+  const updateYTextRef = useRef<((markdown: string, origin: string, yText: any) => void) | null>(null);
+  const expectSharedConnectionRef = useRef(expectSharedConnection);
+
+  // Обновляем refs при изменении props (для значений, доступных сразу)
+  useEffect(() => {
+    onContentChangeRef.current = onContentChange;
+  }, [onContentChange]);
+
+  useEffect(() => {
+    expectSharedConnectionRef.current = expectSharedConnection;
+  }, [expectSharedConnection]);
 
   const { get, loading } = useEditor((root) =>
     Editor.make()
@@ -80,6 +96,15 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
   });
 
   const { updateYText } = useYjsTextUpdate();
+
+  // Обновляем refs при изменении yText и updateYText (после их определения)
+  useEffect(() => {
+    yTextRef.current = yText;
+  }, [yText]);
+
+  useEffect(() => {
+    updateYTextRef.current = updateYText;
+  }, [updateYText]);
 
   const { applyMarkdownToEditor, setupYTextObserver, applyInitialMarkdown, applyingRemoteRef } = useMarkdownSync({
     editorRef,
@@ -240,9 +265,10 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
     };
   }, [expectSharedConnection, isEditorReady, onUndo, onRedo]);
 
-  // Настройка listener для изменений из Milkdown
+  // Настройка listener для изменений из Milkdown (регистрируется ОДИН раз)
   useEffect(() => {
     if (!isEditorReady) return;
+    if (listenerRegisteredRef.current) return; // Предотвращаем повторную регистрацию
     const editor = editorRef.current;
     if (!editor) return;
 
@@ -250,20 +276,24 @@ const MilkdownEditorInner: React.FC<MilkdownEditorProps> = ({
       editor.action((ctx: Ctx) => {
         const manager = ctx.get(listenerCtx as any) as any;
         if (!manager) return;
+
+        // Регистрируем listener один раз, используя refs для актуальных значений
         manager.markdownUpdated((_ctx: unknown, markdown: string) => {
           if (applyingRemoteRef.current) return;
-          onContentChange?.(markdown, { origin: 'milkdown' });
+          onContentChangeRef.current?.(markdown, { origin: 'milkdown' });
           // Обновляем Y.Text только если не используем sharedConnection
           // В режиме с sharedConnection y-prosemirror сам синхронизирует через YXmlFragment
-          if (yText && !expectSharedConnection) {
-            updateYText(markdown, 'milkdown', yText);
+          if (yTextRef.current && !expectSharedConnectionRef.current && updateYTextRef.current) {
+            updateYTextRef.current(markdown, 'milkdown', yTextRef.current);
           }
         });
+
+        listenerRegisteredRef.current = true;
       });
     } catch (error) {
       console.error('[MilkdownEditor] Error setting up listener:', error);
     }
-  }, [isEditorReady, onContentChange, yText, updateYText, applyingRemoteRef, expectSharedConnection]);
+  }, [isEditorReady, applyingRemoteRef]); // Минимальные зависимости - только готовность редактора
 
   // Настройка Y.Text observer и начальное применение
   // В режиме с sharedConnection: ySyncPlugin синхронизирует ProseMirror <-> YXmlFragment

@@ -137,9 +137,9 @@ export const useMarkdownSync = ({
         if (editorFocused) return;
 
         const markdown = yText?.toString?.() ?? '';
-        // Не применяем пустой markdown
-        if (!markdown || markdown.trim().length === 0) return;
-        
+
+        // ИСПРАВЛЕНИЕ: Применяем даже пустой markdown, чтобы preview синхронизировался
+        // когда пользователь удаляет весь текст
         applyingRemoteRef.current = true;
         applyMarkdownToEditor(markdown, { addToHistory: false, preserveSelection: false });
         applyingRemoteRef.current = false;
