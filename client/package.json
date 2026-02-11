@@ -31,13 +31,11 @@
     "start": "rspack serve",
     "build": "rspack build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "eject": "react-scripts eject",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,json}\""
   },
   "browserslist": {
     "production": [
@@ -52,8 +50,14 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@rspack/cli": "^1.6.7",
     "@rspack/core": "^1.6.7",
-    "@rspack/plugin-react-refresh": "^1.5.3"
+    "@rspack/plugin-react-refresh": "^1.5.3",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "prettier": "^3.8.1",
+    "typescript-eslint": "^8.55.0"
   }
 }
