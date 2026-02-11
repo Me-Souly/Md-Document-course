@@ -9,18 +9,18 @@ const authMiddleware = function (req, res, next) {
         }
 
         const accessToken = authorizationHeader.split(' ')[1];
-        if(!accessToken) {
+        if (!accessToken) {
             return next(ApiError.UnauthorizedError());
         }
 
         const userData = tokenService.validateAccessToken(accessToken);
-        if(!userData) {
+        if (!userData) {
             return next(ApiError.UnauthorizedError());
         }
 
         req.user = userData;
         next();
-    } catch (e) {
+    } catch {
         return next(ApiError.UnauthorizedError());
     }
 };

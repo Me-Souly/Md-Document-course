@@ -20,7 +20,7 @@ export const API_URL = resolveApiUrl();
 const $api = axios.create({
     withCredentials: true, // чтобы к каждому запросу куки цеплялись автоматически
     baseURL: API_URL,
-})
+});
 
 $api.interceptors.request.use(async (config) => {
     // Add JWT access token
@@ -48,66 +48,73 @@ $api.interceptors.request.use(async (config) => {
     }
 
     return config;
-})
+});
 
-$api.interceptors.response.use((config) => {
-    return config;
-}, async (error) => {
-    const originalRequest = error.config;
-    
-    // Handle 401 errors (unauthorized)
-    if (error.response?.status === 401 && error.config && !error.config._isRetry) {
-        originalRequest._isRetry = true;
-        try {
-            // Include CSRF token in refresh request
-            const csrfToken = getCsrfToken();
-            const headers: Record<string, string> = {};
-            if (csrfToken) {
-                headers['x-csrf-token'] = csrfToken;
-            }
+$api.interceptors.response.use(
+    (config) => {
+        return config;
+    },
+    async (error) => {
+        const originalRequest = error.config;
 
-            const response = await axios.post<AuthResponse>(
-                `${API_URL}/refresh`,
-                {},
-                {
-                    withCredentials: true,
-                    headers
+        // Handle 401 errors (unauthorized)
+        if (error.response?.status === 401 && error.config && !error.config._isRetry) {
+            originalRequest._isRetry = true;
+            try {
+                // Include CSRF token in refresh request
+                const csrfToken = getCsrfToken();
+                const headers: Record<string, string> = {};
+                if (csrfToken) {
+                    headers['x-csrf-token'] = csrfToken;
                 }
-            );
-            // При обновлении токена сохраняем в то же хранилище, что и было
-            const rememberMe = localStorage.getItem('rememberMe') === 'true';
-            setToken(response.data.accessToken, rememberMe);
-            return $api.request(originalRequest);
-        } catch (e) {
-            console.log('Not authorized, refresh token failed');
-            throw error;
+
+                const response = await axios.post<AuthResponse>(
+                    `${API_URL}/refresh`,
+                    {},
+                    {
+                        withCredentials: true,
+                        headers,
+                    },
+                );
+                // При обновлении токена сохраняем в то же хранилище, что и было
+                const rememberMe = localStorage.getItem('rememberMe') === 'true';
+                setToken(response.data.accessToken, rememberMe);
+                return $api.request(originalRequest);
+            } catch {
+                console.log('Not authorized, refresh token failed');
+                throw error;
+            }
         }
-    }
-    
-    // Show error toast for server errors (except 401 which is handled above)
-    // Only show toast if the request doesn't have skipErrorToast flag
-    // This allows components to handle errors themselves if needed
-    if (!error.config?.skipErrorToast) {
-        if (error.response?.status && error.response.status >= 400 && error.response.status !== 401) {
-            // Try multiple possible error message fields
-            const errorMessage = 
-                error.response?.data?.message || 
-                error.response?.data?.error || 
-                error.response?.data?.errorMessage ||
-                error.message || 
-                'Произошла ошибка';
-            console.log('Showing error toast:', errorMessage, 'Status:', error.response.status);
-            toastManager.error(errorMessage);
-        } else if (!error.response) {
-            // Network error
-            console.log('Network error, showing toast');
-            toastManager.error('Ошибка сети. Проверьте подключение к интернету.');
+
+        // Show error toast for server errors (except 401 which is handled above)
+        // Only show toast if the request doesn't have skipErrorToast flag
+        // This allows components to handle errors themselves if needed
+        if (!error.config?.skipErrorToast) {
+            if (
+                error.response?.status &&
+                error.response.status >= 400 &&
+                error.response.status !== 401
+            ) {
+                // Try multiple possible error message fields
+                const errorMessage =
+                    error.response?.data?.message ||
+                    error.response?.data?.error ||
+                    error.response?.data?.errorMessage ||
+                    error.message ||
+                    'Произошла ошибка';
+                console.log('Showing error toast:', errorMessage, 'Status:', error.response.status);
+                toastManager.error(errorMessage);
+            } else if (!error.response) {
+                // Network error
+                console.log('Network error, showing toast');
+                toastManager.error('Ошибка сети. Проверьте подключение к интернету.');
+            }
+        } else {
+            console.log('Skipping error toast (skipErrorToast flag set)');
         }
-    } else {
-        console.log('Skipping error toast (skipErrorToast flag set)');
-    }
-    
-    throw error;
-})
+
+        throw error;
+    },
+);
 
 export default $api;

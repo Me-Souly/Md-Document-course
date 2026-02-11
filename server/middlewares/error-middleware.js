@@ -1,6 +1,6 @@
 import ApiError from '../exceptions/api-error.js';
 
-const errorMiddleware = function (err, req, res, next) {
+const errorMiddleware = function (err, req, res, _next) {
     console.log(`Error middleware: ${err}`);
 
     // Handle our custom ApiError
@@ -10,7 +10,23 @@ const errorMiddleware = function (err, req, res, next) {
 
     // Handle CSRF errors (from csrf-csrf library)
     if (err.code === 'EBADCSRFTOKEN' || err.message === 'invalid csrf token') {
-        return res.status(403).json({ message: 'Invalid CSRF token. Please refresh the page and try again.' });
+        return res
+            .status(403)
+            .json({ message: 'Invalid CSRF token. Please refresh the page and try again.' });
+    }
+
+    // Handle MongoDB connection errors
+    if (
+        err.name === 'MongoNetworkError' ||
+        err.name === 'MongoServerError' ||
+        err.message?.includes('MongoDB') ||
+        err.message?.includes('buffering timed out')
+    ) {
+        console.error('[Error Middleware] MongoDB connection error:', err.message);
+        return res.status(503).json({
+            message: 'Service temporarily unavailable. Please try again in a moment.',
+            error: 'Database connection error',
+        });
     }
 
     // Handle other errors with status codes

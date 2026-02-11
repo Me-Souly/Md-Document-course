@@ -1,7 +1,7 @@
 import { userRepository } from '../repositories/index.js';
 import ApiError from '../exceptions/api-error.js';
 
-const checkUserActive = async function(req, res, next) {
+const checkUserActive = async function (req, res, next) {
     try {
         const userId = req.user?.id;
         if (!userId) {
@@ -18,7 +18,7 @@ const checkUserActive = async function(req, res, next) {
         }
 
         next();
-    } catch (e) {
+    } catch {
         throw ApiError.BadRequest();
     }
 };

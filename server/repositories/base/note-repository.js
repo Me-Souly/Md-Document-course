@@ -1,12 +1,24 @@
 import BaseRepository from './base-repository.js';
 
 class NoteRepository extends BaseRepository {
-  async incrementViews(noteId) { throw new Error('Not implemented'); }
-  async delete(noteId) { throw new Error('Not implemented'); }
-  async findDeletedByUser(ownerId) { throw new Error('Not implemented'); }
-  async findSharedWithUser(userId) { throw new Error('Not implemented'); }
-  async searchFuzzy(filter = {}, query = '', options = {}) { throw new Error('Not implemented'); }
-  async search(filter, textQuery, options) { throw new Error('Not implemented'); }
+    async incrementViews(_noteId) {
+        throw new Error('Not implemented');
+    }
+    async delete(_noteId) {
+        throw new Error('Not implemented');
+    }
+    async findDeletedByUser(_ownerId) {
+        throw new Error('Not implemented');
+    }
+    async findSharedWithUser(_userId) {
+        throw new Error('Not implemented');
+    }
+    async searchFuzzy(_filter = {}, _query = '', _options = {}) {
+        throw new Error('Not implemented');
+    }
+    async search(_filter, _textQuery, _options) {
+        throw new Error('Not implemented');
+    }
 }
 
 export default NoteRepository;

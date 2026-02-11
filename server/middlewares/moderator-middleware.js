@@ -1,19 +1,19 @@
 import ApiError from '../exceptions/api-error.js';
 
 const moderatorMiddleware = async function (req, res, next) {
-    if(req.method === 'OPTIONS') {
+    if (req.method === 'OPTIONS') {
         next();
     }
 
     try {
         const userData = req.user;
-        if(!userData || userData.role !== 'moderator') {
-            return next(ApiError.ForbiddenError());               
+        if (!userData || userData.role !== 'moderator') {
+            return next(ApiError.ForbiddenError());
         }
 
         return next();
-    } catch (e) {
-        return next(ApiError.ForbiddenError());       
+    } catch {
+        return next(ApiError.ForbiddenError());
     }
 };
 
