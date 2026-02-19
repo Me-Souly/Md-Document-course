@@ -1,6 +1,7 @@
 // yjs/yjs-connector.js
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
+import { IndexeddbPersistence } from 'y-indexeddb';
 import * as decoding from 'lib0/decoding';
 
 // Типы сообщений (должны совпадать с сервером)
@@ -13,7 +14,7 @@ const epochStore = new Map();
  * Создает соединение YJS для заметки
  * @param {Object} options
  * @param {string} options.noteId - ID заметки
- * @param {string} options.token - JWT токен для авторизации
+ * @param {string|null} options.token - JWT токен (null для гостевого доступа)
  * @param {string} options.wsUrl - URL WebSocket сервера (опционально)
  * @returns {Object} Объект с doc, provider, text и методом destroy
  */
@@ -33,6 +34,15 @@ function resolveWsHost(wsUrl) {
 
 export function createNoteConnection({ noteId, token, wsUrl }) {
     const doc = new Y.Doc();
+
+    // IndexedDB persistence — только для авторизованных (гостям не кешируем)
+    let idbPersistence = null;
+    if (token) {
+        idbPersistence = new IndexeddbPersistence(`note-${noteId}`, doc);
+        idbPersistence.on('synced', () => {
+            console.log(`[yjs-connector] IndexedDB state loaded for ${noteId}`);
+        });
+    }
 
     const host = resolveWsHost(wsUrl);
     const room = `yjs/${noteId}`;
@@ -112,10 +122,19 @@ export function createNoteConnection({ noteId, token, wsUrl }) {
                     // Сохраняем новый epoch перед перезагрузкой
                     epochStore.set(noteId, serverEpoch);
 
-                    // Для PWA: перезагружаем страницу, чтобы получить чистое состояние
-                    // Это самый надёжный способ избежать дублирования текста
-                    // TODO: В будущем можно реализовать более умную синхронизацию через IndexedDB
-                    window.location.reload();
+                    // Очищаем IndexedDB перед перезагрузкой, чтобы не было конфликтов
+                    if (idbPersistence) {
+                        idbPersistence
+                            .clearData()
+                            .then(() => {
+                                window.location.reload();
+                            })
+                            .catch(() => {
+                                window.location.reload();
+                            });
+                    } else {
+                        window.location.reload();
+                    }
 
                     return true;
                 } else if (!storedEpoch) {
@@ -249,6 +268,7 @@ export function createNoteConnection({ noteId, token, wsUrl }) {
         provider,
         text,
         fragment,
+        idbPersistence,
         destroy() {
             console.log(`[yjs-connector] Уничтожение соединения для заметки ${noteId}`);
 
@@ -264,6 +284,9 @@ export function createNoteConnection({ noteId, token, wsUrl }) {
                 if (typeof provider.destroy === 'function') {
                     provider.destroy();
                 }
+            }
+            if (idbPersistence && typeof idbPersistence.destroy === 'function') {
+                idbPersistence.destroy();
             }
             if (doc && typeof doc.destroy === 'function') {
                 doc.destroy();

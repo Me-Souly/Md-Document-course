@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@hooks/useStores';
+import { useOnlineStatus } from '@hooks/useOnlineStatus';
 import { ShareIcon, ShieldIcon } from '@components/common/ui/icons';
 import { TopBarBreadcrumbs } from './TopBarBreadcrumbs';
 import { TopBarSearch } from './TopBarSearch';
@@ -11,9 +12,6 @@ import { UserMenu } from './UserMenu';
 import * as styles from './TopBar.module.css';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
-
-// Тип статуса синхронизации
-type SyncStatusType = 'synced' | 'saving' | 'offline';
 
 export interface TopBarProps {
     noteTitle?: string;
@@ -48,7 +46,8 @@ export const TopBar: React.FC<TopBarProps> = observer(
     }) => {
         const navigate = useNavigate();
         const authStore = useAuthStore();
-        const [syncStatus] = useState<SyncStatusType>('synced');
+        const isOnline = useOnlineStatus();
+        const syncStatus = isOnline ? 'synced' : 'offline';
 
         return (
             <header className={styles.topBar}>
