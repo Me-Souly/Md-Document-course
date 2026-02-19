@@ -1,4 +1,5 @@
 import authMiddleware from './auth-middleware.js';
+import optionalAuthMiddleware from './optional-auth-middleware.js';
 import moderatorMiddleware from './moderator-middleware.js';
 import errorMiddleware from './error-middleware.js';
 import activatedMiddleware from './activated-middleware.js';
@@ -17,6 +18,7 @@ import {
 
 export {
     authMiddleware,
+    optionalAuthMiddleware,
     moderatorMiddleware,
     errorMiddleware,
     activatedMiddleware,

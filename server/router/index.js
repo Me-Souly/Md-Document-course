@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import {
     authMiddleware,
+    optionalAuthMiddleware,
     moderatorMiddleware,
     activatedMiddleware,
     checkUserActive,
@@ -151,7 +152,7 @@ router.delete(
 router.get('/notes', authMiddleware, checkUserActive, noteController.getUserNotes);
 router.get('/notes/shared', authMiddleware, checkUserActive, noteController.getSharedNotes);
 router.get('/notes/public', noteController.getAllPublicNotes);
-router.get('/notes/:id', authMiddleware, checkUserActive, noteController.getById);
+router.get('/notes/:id', optionalAuthMiddleware, noteController.getById);
 router.post(
     '/notes',
     createContentLimiter,

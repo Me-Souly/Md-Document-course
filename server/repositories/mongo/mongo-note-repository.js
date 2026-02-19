@@ -61,6 +61,12 @@ class MongoNoteRepository extends NoteRepository {
         return { status: 'softDeleted', message: 'Note marked as deleted' };
     }
 
+    async findPublicWithOwner() {
+        return await NoteModel.find({ isPublic: true, isDeleted: false })
+            .populate('ownerId', 'username')
+            .lean();
+    }
+
     async findDeletedByUser(ownerId) {
         return await NoteModel.find({ ownerId, isDeleted: true });
     }

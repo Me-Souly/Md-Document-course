@@ -7,7 +7,7 @@ import { HomePage } from './HomePage';
 import { ShareModal } from '@components/modals/ShareModal';
 import { ActivationBanner } from '@components/modals/ActivationBanner';
 import { useAuthStore, useSidebarStore } from '@hooks/useStores';
-import $api from '@http';
+import $api, { API_URL } from '@http';
 import { getToken } from '@utils/tokenStorage';
 import * as styles from './NoteEditorPage.module.css';
 
@@ -40,30 +40,47 @@ export const NoteEditorPage: React.FC = () => {
     );
     const lastPresenceKeyRef = useRef<string>('');
 
+    const token = getToken();
+    const isGuest = !token;
+
+    // Загрузка заметки
     useEffect(() => {
-        const token = getToken();
-        if (!token) {
-            // Сохраняем текущий роут перед перенаправлением
-            const currentRoute = window.location.pathname + window.location.search;
-            sessionStorage.setItem('lastRoute', currentRoute);
+        // Гость без noteId — отправляем на лендинг
+        if (isGuest && !noteId) {
             navigate('/');
             return;
         }
 
-        if (!noteId) {
-            // Режим домашнего экрана: заметка не выбрана
+        // Авторизованный без noteId — домашний экран
+        if (!isGuest && !noteId) {
             setNote(null);
             setError(null);
             return;
         }
 
-        // Загружаем метаданные заметки
+        if (!noteId) return;
+
         const loadNote = async () => {
             try {
-                const response = await $api.get(`/notes/${noteId}`);
-                const noteData = response.data as NoteData;
+                let noteData: NoteData;
 
-                // Проверяем права доступа
+                if (isGuest) {
+                    // Гостевой запрос — plain fetch без auth-интерсептора
+                    const res = await fetch(`${API_URL}/notes/${noteId}`);
+                    if (!res.ok) {
+                        if (res.status === 403 || res.status === 404) {
+                            setError('У вас нет доступа к этой заметке');
+                        } else {
+                            setError('Не удалось загрузить заметку');
+                        }
+                        return;
+                    }
+                    noteData = await res.json();
+                } else {
+                    const response = await $api.get(`/notes/${noteId}`);
+                    noteData = response.data as NoteData;
+                }
+
                 if (!noteData.permission) {
                     setError('У вас нет доступа к этой заметке');
                     return;
@@ -74,33 +91,47 @@ export const NoteEditorPage: React.FC = () => {
                 // Загружаем информацию о владельце заметки
                 if (noteData.ownerId) {
                     try {
-                        const ownerResponse = await $api.get(`/users/${noteData.ownerId}`);
+                        const ownerRes = isGuest
+                            ? await fetch(`${API_URL}/users/${noteData.ownerId}`)
+                            : await $api.get(`/users/${noteData.ownerId}`);
+                        const ownerData = isGuest
+                            ? await (ownerRes as Response).json()
+                            : (ownerRes as any).data;
                         setNoteOwnerInfo({
-                            login: ownerResponse.data.login,
-                            name: ownerResponse.data.name || ownerResponse.data.login,
+                            login: ownerData.login,
+                            name: ownerData.name || ownerData.login,
                         });
-                    } catch (ownerError) {
-                        console.error('Failed to load owner info:', ownerError);
+                    } catch {
                         setNoteOwnerInfo(null);
                     }
                 }
             } catch (err: any) {
-                const errorMessage = err.response?.data?.message || 'Failed to load note';
-                // Если 403 или 404 - это проблема доступа
-                if (err.response?.status === 403 || err.response?.status === 404) {
+                const status = err.response?.status;
+                if (status === 403 || status === 404) {
                     setError('У вас нет доступа к этой заметке');
+                } else if (!isGuest && !status) {
+                    // Сервер недоступен — оффлайн-режим для авторизованного пользователя.
+                    // NoteViewer загрузит контент из IndexedDB (y-indexeddb)
+                    setNote({
+                        id: noteId!,
+                        title: 'Оффлайн-режим',
+                        ownerId: authStore.user?.id || '',
+                        isPublic: false,
+                        permission: 'edit',
+                        access: [],
+                    });
                 } else {
-                    setError(errorMessage);
+                    setError(err.response?.data?.message || 'Не удалось загрузить заметку');
                 }
             }
         };
 
         loadNote();
-    }, [noteId, navigate]);
+    }, [noteId, navigate, isGuest, authStore.user?.id]);
 
+    // Sidebar data — только для авторизованных
     useEffect(() => {
-        const token = getToken();
-        if (!token) return;
+        if (isGuest) return;
 
         let isCancelled = false;
 
@@ -109,7 +140,7 @@ export const NoteEditorPage: React.FC = () => {
                 const [foldersResponse, notesResponse, usersResponse] = await Promise.all([
                     $api.get('/folders'),
                     $api.get('/notes'),
-                    $api.get('/users').catch(() => ({ data: [] })), // Загружаем пользователей, но не критично если не получится
+                    $api.get('/users').catch(() => ({ data: [] })),
                 ]);
 
                 if (isCancelled) return;
@@ -121,6 +152,16 @@ export const NoteEditorPage: React.FC = () => {
                 setUsers(usersData);
                 sidebarStore.buildFileTree(foldersData, notesData);
 
+                // Кэшируем данные sidebar для оффлайн-режима
+                try {
+                    localStorage.setItem(
+                        'sidebarCache',
+                        JSON.stringify({ folders: foldersData, notes: notesData }),
+                    );
+                } catch {
+                    /* ignore */
+                }
+
                 if (noteId) {
                     sidebarStore.setSelectedNoteId(noteId);
                     const currentNote = notesData.find((n: any) => n.id === noteId);
@@ -130,6 +171,18 @@ export const NoteEditorPage: React.FC = () => {
                 }
             } catch (treeError) {
                 console.error('Failed to load folders or notes for sidebar:', treeError);
+                // Оффлайн: пробуем восстановить дерево из кэша
+                try {
+                    const cached = localStorage.getItem('sidebarCache');
+                    if (cached) {
+                        const { folders, notes } = JSON.parse(cached);
+                        sidebarStore.buildFileTree(folders, notes);
+                        if (noteId) sidebarStore.setSelectedNoteId(noteId);
+                        return;
+                    }
+                } catch {
+                    /* ignore */
+                }
                 sidebarStore.setFileTree([]);
             }
         };
@@ -139,11 +192,11 @@ export const NoteEditorPage: React.FC = () => {
         return () => {
             isCancelled = true;
         };
-    }, [noteId, sidebarStore]);
+    }, [noteId, sidebarStore, isGuest]);
 
-    // Presence: периодически спрашиваем сервер, какие userId сейчас в WS по этой заметке
+    // Presence — только для авторизованных
     useEffect(() => {
-        if (!noteId) {
+        if (isGuest || !noteId) {
             setOnlineUserIds([]);
             lastPresenceKeyRef.current = '';
             return;
@@ -153,13 +206,11 @@ export const NoteEditorPage: React.FC = () => {
 
         const fetchPresence = async () => {
             try {
-                // skipErrorToast: true - не показываем toast для ошибок presence (не критично)
                 const res = await $api.get(`/notes/${noteId}/presence`, {
                     skipErrorToast: true,
                 } as any);
                 const ids: string[] = Array.isArray(res.data?.userIds) ? res.data.userIds : [];
                 if (!cancelled) {
-                    // Сериализуем и сравниваем, чтобы не дергать ре-рендеры без изменений
                     const key = ids.slice().sort().join(',');
                     if (key !== lastPresenceKeyRef.current) {
                         lastPresenceKeyRef.current = key;
@@ -167,22 +218,20 @@ export const NoteEditorPage: React.FC = () => {
                     }
                 }
             } catch {
-                // тихо игнорируем, presence не критичен
+                // тихо игнорируем
             }
         };
 
-        // первый запрос сразу
         fetchPresence();
-        // и дальше — раз в 30 секунд (достаточно для presence, не нагружает rate limit)
         const interval = setInterval(fetchPresence, 30000);
 
         return () => {
             cancelled = true;
             clearInterval(interval);
         };
-    }, [noteId]);
+    }, [noteId, isGuest]);
 
-    // Проверка доступа - если нет permission, не показываем заметку (но только если заметка успешно загружена)
+    // Проверка доступа
     if (noteId && note && !note.permission) {
         return (
             <div className={styles.errorContainer}>
@@ -195,6 +244,78 @@ export const NoteEditorPage: React.FC = () => {
         );
     }
 
+    // Ошибка загрузки
+    if (noteId && error && !note) {
+        return (
+            <div className={styles.errorContainer}>
+                <h2 className={styles.errorTitle}>{isGuest ? 'Заметка недоступна' : 'Ошибка'}</h2>
+                <p className={styles.errorMessage}>{error}</p>
+                {isGuest ? (
+                    <button onClick={() => navigate('/')} className={styles.errorButton}>
+                        На главную
+                    </button>
+                ) : (
+                    <button onClick={() => navigate(-1)} className={styles.errorButton}>
+                        Назад
+                    </button>
+                )}
+            </div>
+        );
+    }
+
+    // Гостевой режим просмотра заметки
+    if (isGuest && noteId && note) {
+        return (
+            <div className={styles.pageContainer}>
+                <header className={styles.guestHeader}>
+                    <div className={styles.guestHeaderLeft}>
+                        <button className={styles.guestLogoBtn} onClick={() => navigate('/')}>
+                            <span className={styles.guestLogoIcon}>N</span>
+                            <span className={styles.guestLogoText}>Note Editor</span>
+                        </button>
+                        <span className={styles.guestSeparator}>/</span>
+                        <span className={styles.guestNoteTitle}>
+                            {note.title || 'Без названия'}
+                        </span>
+                        {noteOwnerInfo && (
+                            <span className={styles.guestAuthor}>
+                                {noteOwnerInfo.name || noteOwnerInfo.login}
+                            </span>
+                        )}
+                    </div>
+                    <div className={styles.guestHeaderRight}>
+                        <span className={styles.guestBadge}>Только чтение</span>
+                        <button className={styles.guestLoginBtn} onClick={() => navigate('/login')}>
+                            Войти
+                        </button>
+                        <button
+                            className={styles.guestRegisterBtn}
+                            onClick={() => navigate('/login')}
+                        >
+                            Регистрация
+                        </button>
+                    </div>
+                </header>
+
+                <div className={styles.body}>
+                    <div className={styles.container}>
+                        <div className={styles.editorContainer}>
+                            <NoteViewer
+                                noteId={noteId}
+                                permission="read"
+                                getToken={() => null}
+                                initialMarkdown={note.rendered || ''}
+                                ownerId={note.ownerId}
+                                isPublic={note.isPublic}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Авторизованный режим
     return (
         <div className={styles.pageContainer}>
             <ActivationBanner />
@@ -216,7 +337,6 @@ export const NoteEditorPage: React.FC = () => {
                 collaborators={
                     noteId && note
                         ? note.access?.map((access) => {
-                              // Ищем пользователя в списке загруженных пользователей
                               const user = users.find(
                                   (u) =>
                                       u.id === access.userId ||
@@ -240,7 +360,6 @@ export const NoteEditorPage: React.FC = () => {
                                   };
                               }
 
-                              // Если пользователь не найден, используем fallback
                               return {
                                   id: access.userId,
                                   name: `User ${String(access.userId).slice(0, 8)}`,

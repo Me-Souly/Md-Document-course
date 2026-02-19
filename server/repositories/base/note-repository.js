@@ -13,6 +13,9 @@ class NoteRepository extends BaseRepository {
     async findSharedWithUser(_userId) {
         throw new Error('Not implemented');
     }
+    async findPublicWithOwner() {
+        throw new Error('Not implemented');
+    }
     async searchFuzzy(_filter = {}, _query = '', _options = {}) {
         throw new Error('Not implemented');
     }

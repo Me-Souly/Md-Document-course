@@ -17,7 +17,7 @@ class NoteController {
     async update(req, res, next) {
         try {
             const userId = req.user.id;
-            const note = await noteService.update(req.params.id, userId, req.body); 
+            const note = await noteService.update(req.params.id, userId, req.body);
             return res.json(note);
         } catch (e) {
             next(e);
@@ -34,7 +34,7 @@ class NoteController {
             next(e);
         }
     }
-    
+
     // PATCH /api/notes/:id/restore
     async restore(req, res, next) {
         try {
@@ -45,24 +45,24 @@ class NoteController {
             return res.json({
                 success: true,
                 message: 'Note successfully restored',
-                note
+                note,
             });
         } catch (e) {
             next(e);
         }
     }
 
-    // GET /api/notes/:id
+    // GET /api/notes/:id (optionalAuth — гости видят публичные заметки)
     async getById(req, res, next) {
         try {
-            const userId = req.user.id;
-            const note = await noteService.getById(req.params.id, userId); 
-            return res.json(note); 
+            const userId = req.user?.id || null;
+            const note = await noteService.getById(req.params.id, userId);
+            return res.json(note);
         } catch (e) {
             next(e);
         }
     }
-    
+
     // GET /api/notes
     async getUserNotes(req, res, next) {
         try {
@@ -135,7 +135,7 @@ class NoteController {
             const query = req.query.query || '';
             const userId = req.user?.id || null;
             const notes = await noteService.searchPublicNotes(query, userId);
-   
+
             return res.json({ success: true, notes });
         } catch (e) {
             next(e);
@@ -157,10 +157,10 @@ class NoteController {
         try {
             const { id } = req.params;
             const deletedNote = await noteService.deleteNoteAsModerator(id);
-            return res.json({ 
-                success: true, 
+            return res.json({
+                success: true,
                 message: 'Note deleted by moderator',
-                note: deletedNote 
+                note: deletedNote,
             });
         } catch (e) {
             next(e);
@@ -172,10 +172,10 @@ class NoteController {
         try {
             const { id } = req.params;
             const blockedNote = await noteService.blockPublicNoteAsModerator(id);
-            return res.json({ 
-                success: true, 
+            return res.json({
+                success: true,
                 message: 'Note blocked by moderator',
-                note: blockedNote 
+                note: blockedNote,
             });
         } catch (e) {
             next(e);
