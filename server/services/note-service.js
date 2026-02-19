@@ -134,10 +134,7 @@ class NoteService {
     }
 
     async getAllPublicNotes(userId = null) {
-        const notes = await noteRepository.findBy({
-            isPublic: true,
-            isDeleted: false, // Не показываем удалённые публичные заметки
-        });
+        const notes = await noteRepository.findPublicWithOwner();
         return notes.map((note) => new NoteDto(note, userId));
     }
 
@@ -215,14 +212,17 @@ class NoteService {
                         `[NoteService] ⚠ Размер состояния ${originalSize} байт (${(originalSize / 1024).toFixed(2)} KB) превышает порог ${SIZE_THRESHOLD} байт, документ тихий - создаем snapshot...`,
                     );
 
-                    // Создаем новый чистый документ с текущим содержимым
-                    // Это удаляет всю историю обновлений, оставляя только текущее состояние
+                    // ВАЖНО: Компактим через re-apply, а НЕ через text.insert().
+                    // text.insert() создаёт новые CRDT ID, что ломает мерж
+                    // при реконнекте клиента с IndexedDB кэшем (дупликация контента).
+                    // Re-apply на свежий doc сохраняет оригинальные ID,
+                    // но GC удаляет tombstone'ы удалённых элементов.
                     const snapshotDoc = new Y.Doc();
-                    const snapshotText = snapshotDoc.getText('content');
-                    snapshotText.insert(0, text.toString());
+                    Y.applyUpdate(snapshotDoc, buffer);
 
-                    // Кодируем snapshot (это будет чистое состояние без истории обновлений)
+                    // Кодируем snapshot — GC уже применён, tombstone'ы удалены
                     finalState = Y.encodeStateAsUpdate(snapshotDoc);
+                    snapshotDoc.destroy();
                     snapshotCreated = true;
 
                     const newSize = finalState.length;
@@ -236,6 +236,7 @@ class NoteService {
                         `[NoteService] ✓ Экономия: ${savings} байт (${(savings / 1024).toFixed(2)} KB, ${savingsPercent}%)`,
                     );
                 }
+                currentDoc.destroy();
             } catch (extractError) {
                 console.warn(
                     `[NoteService] Не удалось обработать ydocState:`,
