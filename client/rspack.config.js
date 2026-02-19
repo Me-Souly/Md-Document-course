@@ -133,6 +133,17 @@ module.exports = {
     new rspack.DefinePlugin({
       ...processEnv,
     }),
+    new rspack.CopyRspackPlugin({
+      patterns: [
+        { from: 'public/manifest.json', to: 'manifest.json' },
+        { from: 'public/icon.svg', to: 'icon.svg' },
+        { from: 'public/favicon.ico', to: 'favicon.ico' },
+        { from: 'public/logo192.png', to: 'logo192.png' },
+        { from: 'public/logo512.png', to: 'logo512.png' },
+        { from: 'public/robots.txt', to: 'robots.txt' },
+        { from: 'public/service-worker.js', to: 'service-worker.js' },
+      ],
+    }),
   ],
   devServer: {
     port: 3000,
