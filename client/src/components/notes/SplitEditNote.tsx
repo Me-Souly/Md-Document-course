@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNoteYDoc } from '@hooks/useNoteYDoc';
+import { useConnectionStatus } from '@hooks/useConnectionStatus';
 import { useEditorHistory } from './hooks/useEditorHistory';
 import { useScrollSync } from './hooks/useScrollSync';
 import { useUndoRedo } from './hooks/useUndoRedo';
@@ -42,6 +43,8 @@ export const SplitEditNote: React.FC<SplitEditNoteProps> = ({
     const [wordCount, setWordCount] = useState(0);
     const [ownerInfo, _setOwnerInfo] = useState<{ login?: string; name?: string } | null>(null);
     const [showLoader, setShowLoader] = useState(true);
+
+    const connStatus = useConnectionStatus(sharedConnection?.provider ?? null);
 
     const previewContainerRef = useRef<HTMLDivElement | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -316,6 +319,7 @@ export const SplitEditNote: React.FC<SplitEditNoteProps> = ({
                 isPublic={isPublic}
                 ownerInfo={ownerInfo}
                 ownerId={ownerId}
+                connStatus={connStatus}
             />
         </div>
     );
