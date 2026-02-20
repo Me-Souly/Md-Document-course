@@ -1,12 +1,12 @@
-import { makeAutoObservable, runInAction } from "mobx";
-import { IUser } from "@models/IUser";
-import AuthService from "@service/AuthService";
-import PasswordService from "@service/PasswordService"
-import axios from "axios";
-import { AuthResponse } from "@models/response/AuthResponse";
-import { API_URL } from "@http";
-import { setToken, removeToken } from "@utils/tokenStorage";
-import { getCsrfToken, clearCsrfToken, fetchCsrfToken } from "@utils/csrfToken";
+import { makeAutoObservable, runInAction } from 'mobx';
+import { IUser } from '@models/IUser';
+import AuthService from '@service/AuthService';
+import PasswordService from '@service/PasswordService';
+import axios from 'axios';
+import { AuthResponse } from '@models/response/AuthResponse';
+import { API_URL } from '@http';
+import { setToken, removeToken } from '@utils/tokenStorage';
+import { getCsrfToken, clearCsrfToken, fetchCsrfToken } from '@utils/csrfToken';
 
 export default class authStore {
     user = {} as IUser;
@@ -39,6 +39,12 @@ export default class authStore {
                 this.setAuth(true);
                 this.setUser(response.data.user);
             });
+            // Кэшируем данные пользователя для оффлайн-режима
+            try {
+                localStorage.setItem('offlineUser', JSON.stringify(response.data.user));
+            } catch {
+                /* ignore */
+            }
         } catch (e) {
             // Пробрасываем ошибку дальше, чтобы компонент мог её обработать
             if (axios.isAxiosError(e)) {
@@ -51,7 +57,12 @@ export default class authStore {
         }
     }
 
-    async registration(email: string, username: string, password: string, rememberMe: boolean = false) {
+    async registration(
+        email: string,
+        username: string,
+        password: string,
+        rememberMe: boolean = false,
+    ) {
         try {
             const response = await AuthService.registration(email, username, password);
             console.log(response);
@@ -61,6 +72,12 @@ export default class authStore {
                 this.setAuth(true);
                 this.setUser(response.data.user);
             });
+            // Кэшируем данные пользователя для оффлайн-режима
+            try {
+                localStorage.setItem('offlineUser', JSON.stringify(response.data.user));
+            } catch {
+                /* ignore */
+            }
         } catch (e) {
             // Пробрасываем ошибку дальше, чтобы компонент мог её обработать
             console.log(e);
@@ -80,6 +97,7 @@ export default class authStore {
             console.log(response);
             removeToken();
             clearCsrfToken(); // Clear CSRF token on logout
+            localStorage.removeItem('offlineUser');
             // Обновления observable состояния обернуты в runInAction
             runInAction(() => {
                 this.setAuth(false);
@@ -88,10 +106,8 @@ export default class authStore {
             // Fetch new CSRF token for the next login
             await fetchCsrfToken(API_URL);
         } catch (e) {
-            if (axios.isAxiosError(e))
-                console.log(e.response?.data?.message);
-            else
-                console.log(e);
+            if (axios.isAxiosError(e)) console.log(e.response?.data?.message);
+            else console.log(e);
         }
     }
 
@@ -110,8 +126,8 @@ export default class authStore {
                 {},
                 {
                     withCredentials: true,
-                    headers
-                }
+                    headers,
+                },
             );
             // При обновлении токена сохраняем в то же хранилище, что и было
             const rememberMe = localStorage.getItem('rememberMe') === 'true';
@@ -121,11 +137,15 @@ export default class authStore {
                 this.setAuth(true);
                 this.setUser(response.data.user);
             });
+            // Кэшируем данные пользователя для оффлайн-режима
+            try {
+                localStorage.setItem('offlineUser', JSON.stringify(response.data.user));
+            } catch {
+                /* ignore */
+            }
         } catch (e) {
-            if (axios.isAxiosError(e))
-                console.log(e.response?.data?.message);
-            else
-                console.log(e);
+            if (axios.isAxiosError(e)) console.log(e.response?.data?.message);
+            else console.log(e);
         } finally {
             // Обновления observable состояния обернуты в runInAction
             runInAction(() => {
@@ -137,14 +157,10 @@ export default class authStore {
     async requestReset(email: string) {
         try {
             const response = await PasswordService.requestReset(email);
-            if(response.data.success === true)
-                console.log(response.data);
-
+            if (response.data.success === true) console.log(response.data);
         } catch (e) {
-            if (axios.isAxiosError(e))
-                console.log(e.response?.data?.message);
-            else
-                console.log(e);
+            if (axios.isAxiosError(e)) console.log(e.response?.data?.message);
+            else console.log(e);
         }
     }
 

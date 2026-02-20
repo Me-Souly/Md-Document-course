@@ -80,26 +80,22 @@ function App() {
             const timeout = new Promise<void>((resolve) => setTimeout(resolve, 4000));
             await Promise.race([serverInit(), timeout]);
 
-            // Если сервер не ответил, но есть токен — оффлайн-режим:
-            // декодируем JWT и используем данные для оптимистичной авторизации
-            if (!authStore.isAuth && token) {
+            // Если сервер не ответил — оффлайн-режим:
+            // берём закэшированные данные пользователя (сохраняются при каждом успешном логине).
+            // Не привязываемся к сроку access token (15 мин) — refresh cookie (30 дней)
+            // будет проверен сервером при следующем выходе в сеть.
+            if (!authStore.isAuth) {
                 try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    if (payload.id && payload.exp * 1000 > Date.now()) {
-                        authStore.setAuth(true);
-                        authStore.setUser({
-                            id: payload.id,
-                            email: payload.email || '',
-                            login: payload.login || '',
-                            name: payload.name || payload.login || '',
-                            role: payload.role || 'user',
-                            isActivated: payload.isActivated ?? true,
-                            avatarUrl: payload.avatarUrl || null,
-                            about: payload.about || null,
-                        });
+                    const cached = localStorage.getItem('offlineUser');
+                    if (cached) {
+                        const user = JSON.parse(cached);
+                        if (user?.id) {
+                            authStore.setAuth(true);
+                            authStore.setUser(user);
+                        }
                     }
                 } catch {
-                    /* невалидный токен — оставляем неавторизованным */
+                    /* повреждённый кэш — оставляем неавторизованным */
                 }
             }
 
