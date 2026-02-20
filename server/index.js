@@ -1,6 +1,19 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import * as Sentry from '@sentry/node';
+
+// Sentry инициализируется до всего остального, чтобы перехватывать все ошибки
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'development',
+        // Записываем 100% транзакций в development, 10% в production
+        tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    });
+    console.log('[Sentry] Initialized');
+}
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -17,6 +30,7 @@ import { roleRepository, userRepository } from './repositories/index.js';
 import { setupYjs, saveAllActiveDocs } from './yjs/yjs-server.js';
 // 2. === ИМПОРТИРУЕМ REDIS-СЕРВИС ===
 import redisService from './services/redis-service.js';
+import securityLogger from './services/security-logger.js';
 
 const PORT = process.env.PORT || 5000;
 const app = express();
@@ -27,7 +41,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Логирование всех запросов для отладки (после парсинга body)
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
     console.log(`[Server] ${req.method} ${req.url}`);
     if (req.body && Object.keys(req.body).length > 0) {
         console.log(`[Server] Body:`, {
@@ -38,10 +52,16 @@ app.use((req, res, next) => {
     next();
 });
 
-// Настройка CORS с поддержкой нескольких origins
+// Настройка CORS — whitelist разрешённых origins
+// В production задайте CLIENT_URL в .env (через запятую для нескольких доменов):
+//   CLIENT_URL=https://yourdomain.com,https://www.yourdomain.com
 const allowedOrigins = process.env.CLIENT_URL
     ? process.env.CLIENT_URL.split(',').map((url) => url.trim())
     : ['http://localhost:3000', 'http://localhost:3001'];
+
+if (process.env.NODE_ENV === 'production') {
+    console.log('[CORS] Production mode — allowed origins:', allowedOrigins);
+}
 
 app.use(
     cors({
@@ -69,16 +89,21 @@ app.use(
                 }
             }
 
-            // Проверяем разрешённые origins
+            // Проверяем whitelist разрешённых origins
             if (allowedOrigins.includes(origin)) {
                 return callback(null, true);
             }
 
+            securityLogger.corsRejected(origin);
             callback(new Error('Not allowed by CORS'));
         },
     }),
 );
 app.use('/api', router);
+// Sentry должен перехватывать ошибки до нашего errorMiddleware
+if (process.env.SENTRY_DSN) {
+    Sentry.setupExpressErrorHandler(app);
+}
 app.use(errorMiddleware);
 
 // --- инициализация ---

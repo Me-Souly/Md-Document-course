@@ -4,6 +4,7 @@ import tokenService from './token-service.js';
 import userService from './user-service.js';
 import roleService from './role-service.js';
 import ApiError from '../exceptions/api-error.js';
+import securityLogger from './security-logger.js';
 
 class AuthService {
     async createSession(user) {
