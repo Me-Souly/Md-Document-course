@@ -13,6 +13,7 @@ if (process.env.REACT_APP_SENTRY_DSN) {
         // Записываем 100% транзакций в development, 10% в production
         tracesSampleRate: process.env.REACT_APP_SENTRY_ENVIRONMENT === 'production' ? 0.1 : 1.0,
         // Показывать диалог обратной связи при необработанной ошибке
+        sendDefaultPii: true,
         beforeSend(event) {
             return event;
         },

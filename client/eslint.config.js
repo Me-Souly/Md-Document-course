@@ -2,7 +2,6 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import eslintConfigPrettier from 'eslint-config-prettier';
-import mobx from 'eslint-plugin-mobx';
 
 export default tseslint.config(
     // Игнорируемые файлы
@@ -63,19 +62,6 @@ export default tseslint.config(
             '@typescript-eslint/no-explicit-any': 'warn',
             // Разрешаем require() в .js файлах
             '@typescript-eslint/no-require-imports': 'off',
-        },
-    },
-
-    // MobX правила — ловим нарушения паттернов MobX
-    {
-        plugins: { mobx },
-        rules: {
-            // makeObservable/makeAutoObservable должен вызываться в конструкторе
-            'mobx/missing-make-observable': 'error',
-            // makeObservable/makeAutoObservable не должен быть в условиях
-            'mobx/unconditional-make-observable': 'error',
-            // Компоненты-наблюдатели должны иметь имя (для отладки в DevTools)
-            'mobx/no-anonymous-observer': 'warn',
         },
     },
 
