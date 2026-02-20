@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronsLeftIcon, ChevronsRightIcon } from '@components/common/ui/icons';
-import * as styles from '../FileSidebar.module.css';
+import * as styles from '@components/sidebar/FileSidebar.module.css';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 

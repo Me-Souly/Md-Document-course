@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import * as styles from '../NoteViewer.module.css';
+import * as styles from '@components/notes/NoteViewer.module.css';
 
 interface EditorTextareaProps {
     value: string;

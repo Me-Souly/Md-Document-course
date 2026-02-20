@@ -4,7 +4,7 @@ import { useToastContext } from '@contexts/ToastContext';
 import ActivationService from '@service/ActivationService';
 import { observer } from 'mobx-react-lite';
 import { MailIcon, RefreshIcon, CheckIcon } from '@components/common/ui/icons';
-import * as styles from './ActivationBanner.module.css';
+import * as styles from '@components/modals/ActivationBanner.module.css';
 
 export const ActivationBanner: React.FC = observer(() => {
     const authStore = useAuthStore();

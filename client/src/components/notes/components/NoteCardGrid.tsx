@@ -1,8 +1,8 @@
 import React from 'react';
 import { GlobeIcon, StarIcon, BanIcon } from '@components/common/ui/icons';
-import { NoteCardMenu } from './NoteCardMenu';
-import { getNotePreview, formatNoteDate } from '../utils';
-import * as styles from '../NoteCard.module.css';
+import { NoteCardMenu } from '@components/notes/components/NoteCardMenu';
+import { getNotePreview, formatNoteDate } from '@components/notes/utils';
+import * as styles from '@components/notes/NoteCard.module.css';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 

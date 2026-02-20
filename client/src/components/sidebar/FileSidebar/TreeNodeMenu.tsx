@@ -7,7 +7,7 @@ import { useModal } from '@hooks/useModal';
 import { Modal } from '@components/common/ui/Modal';
 import { observer } from 'mobx-react-lite';
 import $api from '@http';
-import * as styles from '../FileSidebar.module.css';
+import * as styles from '@components/sidebar/FileSidebar.module.css';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 

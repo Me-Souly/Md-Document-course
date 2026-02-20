@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import RootStore from './RootStore';
+import RootStore from '@stores/RootStore';
 import type { Note } from '@app-types/notes';
 
 /**

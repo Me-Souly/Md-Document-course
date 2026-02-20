@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '@http';
-import * as styles from './LandingPage.module.css';
+import * as styles from '@pages/LandingPage.module.css';
 
 interface PublicNote {
     id: string;

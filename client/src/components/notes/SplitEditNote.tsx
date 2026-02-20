@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNoteYDoc } from '@hooks/useNoteYDoc';
 import { useConnectionStatus } from '@hooks/useConnectionStatus';
-import { useEditorHistory } from './hooks/useEditorHistory';
-import { useScrollSync } from './hooks/useScrollSync';
-import { useUndoRedo } from './hooks/useUndoRedo';
-import { EditorToolbar } from './components/EditorToolbar';
-import { EditorBottomBar } from './components/EditorBottomBar';
-import { NoteViewerContent } from './components/NoteViewerContent';
-import * as styles from './NoteViewer.module.css';
+import { useEditorHistory } from '@components/notes/hooks/useEditorHistory';
+import { useScrollSync } from '@components/notes/hooks/useScrollSync';
+import { useUndoRedo } from '@components/notes/hooks/useUndoRedo';
+import { EditorToolbar } from '@components/notes/components/EditorToolbar';
+import { EditorBottomBar } from '@components/notes/components/EditorBottomBar';
+import { NoteViewerContent } from '@components/notes/components/NoteViewerContent';
+import * as styles from '@components/notes/NoteViewer.module.css';
 
 const cx = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 

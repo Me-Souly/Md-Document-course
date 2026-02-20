@@ -9,10 +9,10 @@ import { Ctx } from '@milkdown/ctx';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { keymap } from 'prosemirror-keymap';
-import { useYjsConnection } from './hooks/useYjsConnection';
-import { useMarkdownSync } from './hooks/useMarkdownSync';
-import { useYjsTextUpdate } from './hooks/useYjsTextUpdate';
-import * as styles from './MilkdownEditor.module.css';
+import { useYjsConnection } from '@components/notes/hooks/useYjsConnection';
+import { useMarkdownSync } from '@components/notes/hooks/useMarkdownSync';
+import { useYjsTextUpdate } from '@components/notes/hooks/useYjsTextUpdate';
+import * as styles from '@components/notes/MilkdownEditor.module.css';
 
 const cx = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 

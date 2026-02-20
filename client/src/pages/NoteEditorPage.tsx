@@ -3,13 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { NoteViewer } from '@components/notes/NoteViewer';
 import { FileSidebar } from '@components/sidebar/FileSidebar';
 import { TopBar } from '@components/common/layout/topbar';
-import { HomePage } from './HomePage';
+import { HomePage } from '@pages/HomePage';
 import { ShareModal } from '@components/modals/ShareModal';
 import { ActivationBanner } from '@components/modals/ActivationBanner';
 import { useAuthStore, useSidebarStore } from '@hooks/useStores';
 import $api, { API_URL } from '@http';
 import { getToken } from '@utils/tokenStorage';
-import * as styles from './NoteEditorPage.module.css';
+import * as styles from '@pages/NoteEditorPage.module.css';
 
 interface NoteData {
     id: string;

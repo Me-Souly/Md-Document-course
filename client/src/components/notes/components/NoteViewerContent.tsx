@@ -1,9 +1,9 @@
 import React from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { MilkdownEditor } from '../MilkdownEditor';
-import { EditorTextarea } from './EditorTextarea';
-import { EditorErrorBoundary } from '../../ErrorBoundary';
-import * as styles from '../NoteViewer.module.css';
+import { MilkdownEditor } from '@components/notes/MilkdownEditor';
+import { EditorTextarea } from '@components/notes/components/EditorTextarea';
+import { EditorErrorBoundary } from '@components/ErrorBoundary';
+import * as styles from '@components/notes/NoteViewer.module.css';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 

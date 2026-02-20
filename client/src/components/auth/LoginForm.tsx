@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@hooks/useStores';
 import { useToastContext } from '@contexts/ToastContext';
 import { observer } from 'mobx-react-lite';
-import { ForgotPasswordModal } from './ForgotPasswordModal';
+import { ForgotPasswordModal } from '@components/auth/ForgotPasswordModal';
 import {
     Button,
     Input,
@@ -13,7 +13,7 @@ import {
     LogInIcon,
 } from '@components/common/ui';
 import { isRememberMe } from '@utils/tokenStorage';
-import * as styles from './Auth.module.css';
+import * as styles from '@components/auth/Auth.module.css';
 
 interface LoginFormProps {
     onSwitchToRegister: () => void;

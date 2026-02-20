@@ -1,20 +1,20 @@
 import React, { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { Auth } from './components/auth/Auth';
-import { useAuthStore } from './hooks/useStores';
+import { Auth } from '@components/auth/Auth';
+import { useAuthStore } from '@hooks/useStores';
 import { observer } from 'mobx-react-lite';
-import { NoteEditorPage } from './pages/NoteEditorPage';
-import { LandingPage } from './pages/LandingPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { PublicProfilePage } from './pages/PublicProfilePage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { ActivationPage } from './pages/ActivationPage';
-import { ModeratorDashboard } from './pages/ModeratorDashboard';
-import { ToastProvider } from './contexts/ToastContext';
-import { Loader } from './components/common/ui';
-import { getToken } from './utils/tokenStorage';
-import { fetchCsrfToken } from './utils/csrfToken';
-import { API_URL } from './http';
+import { NoteEditorPage } from '@pages/NoteEditorPage';
+import { LandingPage } from '@pages/LandingPage';
+import { ProfilePage } from '@pages/ProfilePage';
+import { PublicProfilePage } from '@pages/PublicProfilePage';
+import { ResetPasswordPage } from '@pages/ResetPasswordPage';
+import { ActivationPage } from '@pages/ActivationPage';
+import { ModeratorDashboard } from '@pages/ModeratorDashboard';
+import { ToastProvider } from '@contexts/ToastContext';
+import { Loader } from '@components/common/ui';
+import { getToken } from '@utils/tokenStorage';
+import { fetchCsrfToken } from '@utils/csrfToken';
+import { API_URL } from '@http';
 
 // Компонент для защиты роутов
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = observer(({ children }) => {

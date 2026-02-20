@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@hooks/useStores';
 import { useOnlineStatus } from '@hooks/useOnlineStatus';
 import { ShareIcon, ShieldIcon } from '@components/common/ui/icons';
-import { TopBarBreadcrumbs } from './TopBarBreadcrumbs';
-import { TopBarSearch } from './TopBarSearch';
-import { SyncStatus } from './SyncStatus';
-import { CollaboratorsList } from './CollaboratorsList';
-import { UserMenu } from './UserMenu';
-import * as styles from './TopBar.module.css';
+import { TopBarBreadcrumbs } from '@components/common/layout/topbar/TopBarBreadcrumbs';
+import { TopBarSearch } from '@components/common/layout/topbar/TopBarSearch';
+import { SyncStatus } from '@components/common/layout/topbar/SyncStatus';
+import { CollaboratorsList } from '@components/common/layout/topbar/CollaboratorsList';
+import { UserMenu } from '@components/common/layout/topbar/UserMenu';
+import * as styles from '@components/common/layout/topbar/TopBar.module.css';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 

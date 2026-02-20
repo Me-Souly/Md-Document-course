@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GlobeIcon, UserIcon } from '@components/common/ui/icons';
 import { ConnectionStatus } from '@hooks/useConnectionStatus';
-import * as styles from '../NoteViewer.module.css';
+import * as styles from '@components/notes/NoteViewer.module.css';
 
 const STATUS_CONFIG: Record<ConnectionStatus, { label: string; dotClass: string }> = {
     connected: { label: 'Синхронизировано', dotClass: styles.dotConnected },

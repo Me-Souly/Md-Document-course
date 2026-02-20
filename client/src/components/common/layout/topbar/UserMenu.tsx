@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { useAuthStore } from '@hooks/useStores';
 import { UserIcon } from '@components/common/ui/icons';
-import { getUserInitials } from './utils';
-import * as styles from './TopBar.module.css';
+import { getUserInitials } from '@components/common/layout/topbar/utils';
+import * as styles from '@components/common/layout/topbar/TopBar.module.css';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 
