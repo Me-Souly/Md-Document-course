@@ -119,8 +119,10 @@ services:
         REACT_APP_API_PORT: ${REACT_APP_API_PORT:-5000}
         REACT_APP_WS_PORT: ${REACT_APP_WS_PORT:-5000}
     container_name: note-editor-client
-    ports:
-      - "${CLIENT_PORT:-3000}:80"
+    # Порт не публикуем напрямую — трафик идёт через nginx reverse proxy
+    # Для разработки без nginx раскомментируйте:
+    # ports:
+    #   - "${CLIENT_PORT:-3000}:80"
     depends_on:
       - server
     restart: unless-stopped
@@ -132,12 +134,36 @@ services:
     networks:
       - note-editor-network
 
+  # Nginx Reverse Proxy (HTTPS termination)
+  # Требует SSL-сертификаты в ./nginx/certs/:
+  #   fullchain.pem — сертификат + цепочка CA
+  #   privkey.pem   — приватный ключ
+  # Инструкции: см. nginx/nginx.conf
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: note-editor-nginx
+    ports:
+      - "80:80"    # HTTP → редирект на HTTPS
+      - "443:443"  # HTTPS
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - certbot-webroot:/var/www/certbot:ro
+    depends_on:
+      - client
+      - server
+    restart: unless-stopped
+    networks:
+      - note-editor-network
+
 volumes:
   mongodb-data:
     driver: local
   mongodb-config:
     driver: local
   redis-data:
+    driver: local
+  certbot-webroot:
     driver: local
 
 networks:
