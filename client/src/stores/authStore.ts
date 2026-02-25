@@ -12,6 +12,7 @@ export default class authStore {
     user = {} as IUser;
     isAuth = false;
     isLoading = false;
+    isOfflineMode = false;
 
     constructor() {
         makeAutoObservable(this);
@@ -27,6 +28,10 @@ export default class authStore {
 
     setLoading(bool: boolean) {
         this.isLoading = bool;
+    }
+
+    setOfflineMode(value: boolean) {
+        this.isOfflineMode = value;
     }
 
     async login(identifier: string, password: string, rememberMe: boolean = false) {
@@ -144,8 +149,21 @@ export default class authStore {
                 /* ignore */
             }
         } catch (e) {
-            if (axios.isAxiosError(e)) console.log(e.response?.data?.message);
-            else console.log(e);
+            if (axios.isAxiosError(e)) {
+                console.log(e.response?.data?.message);
+                if (e.response) {
+                    // Сервер ответил ошибкой (401/403) — сессия недействительна,
+                    // сбрасываем авторизацию и очищаем оффлайн-кэш
+                    runInAction(() => {
+                        this.setAuth(false);
+                        this.setUser({} as IUser);
+                    });
+                    localStorage.removeItem('offlineUser');
+                }
+                // Нет response → сетевая ошибка → сохраняем текущее состояние (оффлайн-режим)
+            } else {
+                console.log(e);
+            }
         } finally {
             // Обновления observable состояния обернуты в runInAction
             runInAction(() => {

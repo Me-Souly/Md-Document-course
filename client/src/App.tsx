@@ -14,7 +14,7 @@ import { ToastProvider } from '@contexts/ToastContext';
 import { Loader } from '@components/common/ui';
 import { getToken } from '@utils/tokenStorage';
 import { fetchCsrfToken } from '@utils/csrfToken';
-import { API_URL } from '@http';
+import { API_URL, setHttpOfflineMode } from '@http';
 
 // Компонент для защиты роутов
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = observer(({ children }) => {
@@ -67,12 +67,16 @@ function App() {
     useEffect(() => {
         const initialize = async () => {
             const token = getToken();
+            let serverReachable = false;
 
             // Пытаемся получить CSRF и проверить сессию, но с таймаутом
             // чтобы приложение не зависало при недоступном сервере
             const serverInit = async () => {
-                await fetchCsrfToken(API_URL);
-                if (token) {
+                const csrf = await fetchCsrfToken(API_URL);
+                // fetchCsrfToken глотает ошибки и возвращает null при сетевой ошибке.
+                // Ненулевой результат = сервер точно ответил.
+                serverReachable = csrf !== null;
+                if (serverReachable && token) {
                     await authStore.checkAuth();
                 }
             };
@@ -80,11 +84,16 @@ function App() {
             const timeout = new Promise<void>((resolve) => setTimeout(resolve, 4000));
             await Promise.race([serverInit(), timeout]);
 
-            // Если сервер не ответил — оффлайн-режим:
-            // берём закэшированные данные пользователя (сохраняются при каждом успешном логине).
-            // Не привязываемся к сроку access token (15 мин) — refresh cookie (30 дней)
-            // будет проверен сервером при следующем выходе в сеть.
-            if (!authStore.isAuth) {
+            // Оффлайн-режим: кэш используем ТОЛЬКО если сервер недоступен.
+            // Если сервер доступен, но сессия недействительна — показываем лендинг/логин.
+            // (Закрытие вкладки без "запомнить меня" → sessionStorage сброшен,
+            //  cookie тоже истекло → сервер вернёт 401 → пользователь не авторизован.)
+            if (!serverReachable) {
+                authStore.setOfflineMode(true);
+                setHttpOfflineMode(true);
+            }
+
+            if (!authStore.isAuth && !serverReachable) {
                 try {
                     const cached = localStorage.getItem('offlineUser');
                     if (cached) {
@@ -103,6 +112,21 @@ function App() {
         };
 
         initialize();
+    }, [authStore]);
+
+    // При восстановлении соединения перепроверяем сессию на сервере.
+    // Если пользователь был авторизован через оффлайн-кэш, а refresh-токен
+    // оказался недействительным — checkAuth сбросит isAuth и очистит кэш.
+    useEffect(() => {
+        const handleOnline = () => {
+            authStore.setOfflineMode(false);
+            setHttpOfflineMode(false);
+            if (authStore.isAuth) {
+                authStore.checkAuth();
+            }
+        };
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
     }, [authStore]);
 
     // Показываем загрузку, пока идет инициализация
