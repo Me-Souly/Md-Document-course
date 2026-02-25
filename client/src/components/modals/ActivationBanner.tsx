@@ -12,8 +12,9 @@ export const ActivationBanner: React.FC = observer(() => {
     const [loading, setLoading] = useState(false);
     const [checking, setChecking] = useState(false);
 
-    // Не показываем баннер, если аккаунт активирован
-    if (authStore.user?.isActivated) {
+    // Не показываем баннер если аккаунт активирован или если сервер недоступен
+    // (в оффлайне кэш может быть устаревшим, и всё равно ничего нельзя сделать)
+    if (authStore.user?.isActivated || authStore.isOfflineMode) {
         return null;
     }
 

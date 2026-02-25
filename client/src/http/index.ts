@@ -22,6 +22,13 @@ const $api = axios.create({
     baseURL: API_URL,
 });
 
+// Флаг оффлайн-режима — выставляется из App.tsx когда сервер недоступен при старте.
+// Подавляет тост "ошибка сети" для всех фоновых запросов во время оффлайн-сессии.
+let _offlineMode = false;
+export const setHttpOfflineMode = (value: boolean) => {
+    _offlineMode = value;
+};
+
 $api.interceptors.request.use(async (config) => {
     // Add JWT access token
     const token = getToken();
@@ -52,6 +59,8 @@ $api.interceptors.request.use(async (config) => {
 
 $api.interceptors.response.use(
     (config) => {
+        // Первый успешный ответ сигнализирует, что сервер снова доступен
+        if (_offlineMode) _offlineMode = false;
         return config;
     },
     async (error) => {
@@ -105,9 +114,12 @@ $api.interceptors.response.use(
                 console.log('Showing error toast:', errorMessage, 'Status:', error.response.status);
                 toastManager.error(errorMessage);
             } else if (!error.response) {
-                // Network error
-                console.log('Network error, showing toast');
-                toastManager.error('Ошибка сети. Проверьте подключение к интернету.');
+                // Network error — подавляем тост в оффлайн-режиме (флаг выставляется из App.tsx),
+                // иначе при старте без сервера каждый фоновый запрос спамит уведомлениями
+                if (!_offlineMode) {
+                    console.log('Network error, showing toast');
+                    toastManager.error('Ошибка сети. Проверьте подключение к интернету.');
+                }
             }
         } else {
             console.log('Skipping error toast (skipErrorToast flag set)');
