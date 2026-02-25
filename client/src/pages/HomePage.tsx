@@ -21,11 +21,32 @@ interface HomeNote {
     isShared?: boolean;
 }
 
+const HOME_NOTES_CACHE_KEY = 'homeNotesCache';
+
+const mapNote = (n: any): HomeNote => {
+    let excerpt = n.meta?.excerpt;
+    if (!excerpt && n.meta?.searchableContent) {
+        excerpt = n.meta.searchableContent.trim().slice(0, 200);
+    }
+    return {
+        id: n.id,
+        title: n.title || 'Untitled',
+        rendered: n.rendered,
+        excerpt: excerpt,
+        searchableContent: n.meta?.searchableContent,
+        updatedAt: n.updatedAt,
+        createdAt: n.createdAt,
+        isFavorite: n.meta?.isFavorite ?? false,
+        isShared: n.isPublic ?? false,
+    };
+};
+
 export const HomePage: React.FC = () => {
     const [notes, setNotes] = useState<HomeNote[]>([]);
     const [sharedNotes, setSharedNotes] = useState<HomeNote[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isOffline, setIsOffline] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [sortBy, setSortBy] = useState<SortOption>('date-edited');
 
@@ -35,36 +56,49 @@ export const HomePage: React.FC = () => {
                 setLoading(true);
                 const [ownNotesRes, sharedNotesRes] = await Promise.all([
                     $api.get('/notes'),
-                    $api.get('/notes/shared').catch(() => ({ data: [] })), // Ignore errors for shared notes
+                    $api.get('/notes/shared').catch(() => ({ data: [] })),
                 ]);
 
                 const ownData = Array.isArray(ownNotesRes.data) ? ownNotesRes.data : [];
                 const sharedData = Array.isArray(sharedNotesRes.data) ? sharedNotesRes.data : [];
 
-                const mapNote = (n: any): HomeNote => {
-                    let excerpt = n.meta?.excerpt;
-                    if (!excerpt && n.meta?.searchableContent) {
-                        excerpt = n.meta.searchableContent.trim().slice(0, 200);
-                    }
+                const mappedOwn = ownData.map(mapNote);
+                const mappedShared = sharedData.map(mapNote);
 
-                    return {
-                        id: n.id,
-                        title: n.title || 'Untitled',
-                        rendered: n.rendered,
-                        excerpt: excerpt,
-                        searchableContent: n.meta?.searchableContent,
-                        updatedAt: n.updatedAt,
-                        createdAt: n.createdAt,
-                        isFavorite: n.meta?.isFavorite ?? false,
-                        isShared: n.isPublic ?? false,
-                    };
-                };
-
-                setNotes(ownData.map(mapNote));
-                setSharedNotes(sharedData.map(mapNote));
+                setNotes(mappedOwn);
+                setSharedNotes(mappedShared);
+                setIsOffline(false);
                 setError(null);
+
+                // Кэшируем для оффлайн-режима
+                try {
+                    localStorage.setItem(
+                        HOME_NOTES_CACHE_KEY,
+                        JSON.stringify({ notes: mappedOwn, sharedNotes: mappedShared }),
+                    );
+                } catch {
+                    /* ignore */
+                }
             } catch (e: any) {
-                setError(e?.response?.data?.message || 'Failed to load notes');
+                if (!e?.response) {
+                    // Сетевая ошибка — пробуем кэш
+                    try {
+                        const cached = localStorage.getItem(HOME_NOTES_CACHE_KEY);
+                        if (cached) {
+                            const { notes: cn, sharedNotes: cs } = JSON.parse(cached);
+                            setNotes(cn || []);
+                            setSharedNotes(cs || []);
+                            setIsOffline(true);
+                            setError(null);
+                        } else {
+                            setError('Нет подключения к серверу');
+                        }
+                    } catch {
+                        setError('Нет подключения к серверу');
+                    }
+                } else {
+                    setError(e?.response?.data?.message || 'Failed to load notes');
+                }
             } finally {
                 setLoading(false);
             }
@@ -176,7 +210,10 @@ export const HomePage: React.FC = () => {
         <div className={styles.homePage}>
             <div className={styles.homeInner}>
                 <div className={styles.homeHeader}>
-                    <h1 className={styles.homeTitle}>Your Notes</h1>
+                    <h1 className={styles.homeTitle}>
+                        Your Notes
+                        {isOffline && <span className={styles.offlineBadge}>оффлайн</span>}
+                    </h1>
                     <div className={styles.homeControls}>
                         <div className={styles.viewModeToggle}>
                             <button
